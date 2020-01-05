@@ -117,6 +117,10 @@ typedef struct {
  */
 void ebur128_get_version(int* major, int* minor, int* patch);
 
+/** \brief Initialize global library state.
+ */
+void ebur128_libinit(void);
+
 /** \brief Initialize library state.
  *
  *  @param channels the number of channels.

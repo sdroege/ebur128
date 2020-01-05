@@ -136,6 +136,10 @@ extern "C" {
     );
 }
 extern "C" {
+    #[doc = " \\brief Initialize global library state."]
+    pub fn ebur128_libinit();
+}
+extern "C" {
     #[doc = " \\brief Initialize library state."]
     #[doc = ""]
     #[doc = "  @param channels the number of channels."]

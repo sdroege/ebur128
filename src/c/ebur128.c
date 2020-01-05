@@ -400,6 +400,24 @@ void ebur128_get_version(int* major, int* minor, int* patch) {
     }                                                                          \
   } while (0);
 
+void
+ebur128_libinit(void) {
+  int i;
+
+  /* initialize static constants */
+  relative_gate_factor = pow(10.0, relative_gate / 10.0);
+  minus_twenty_decibels = pow(10.0, -20.0 / 10.0);
+  histogram_energy_boundaries[0] = pow(10.0, (-70.0 + 0.691) / 10.0);
+  for (i = 0; i < 1000; ++i) {
+    histogram_energies[i] =
+        pow(10.0, ((double) i / 10.0 - 69.95 + 0.691) / 10.0);
+  }
+  for (i = 1; i < 1001; ++i) {
+    histogram_energy_boundaries[i] =
+        pow(10.0, ((double) i / 10.0 - 70.0 + 0.691) / 10.0);
+  }
+}
+
 ebur128_state*
 ebur128_init(unsigned int channels, unsigned long samplerate, int mode) {
   int result;
@@ -499,21 +517,6 @@ ebur128_init(unsigned int channels, unsigned long samplerate, int mode) {
   st->d->needed_frames = st->d->samples_in_100ms * 4;
   /* start at the beginning of the buffer */
   st->d->audio_data_index = 0;
-
-  /* initialize static constants */
-  relative_gate_factor = pow(10.0, relative_gate / 10.0);
-  minus_twenty_decibels = pow(10.0, -20.0 / 10.0);
-  histogram_energy_boundaries[0] = pow(10.0, (-70.0 + 0.691) / 10.0);
-  if (st->d->use_histogram) {
-    for (i = 0; i < 1000; ++i) {
-      histogram_energies[i] =
-          pow(10.0, ((double) i / 10.0 - 69.95 + 0.691) / 10.0);
-    }
-    for (i = 1; i < 1001; ++i) {
-      histogram_energy_boundaries[i] =
-          pow(10.0, ((double) i / 10.0 - 70.0 + 0.691) / 10.0);
-    }
-  }
 
   return st;
 

@@ -1,1 +1,4 @@
 68abf1bd0a904b4bae613f9aeed85e215af1c4e3 from https://github.com/jiixyj/libebur128
+
+Changes:
+- Adding ebur128_libinit() for global one-time initialization.

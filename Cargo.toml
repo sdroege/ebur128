@@ -1,0 +1,10 @@
+[package]
+name = "ebur128"
+version = "0.1.0"
+authors = ["Sebastian Dröge <sebastian@centricular.com>"]
+edition = "2018"
+
+[dependencies]
+
+[build-dependencies]
+cc = "1.0"

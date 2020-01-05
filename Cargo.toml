@@ -3,8 +3,16 @@ name = "ebur128"
 version = "0.1.0"
 authors = ["Sebastian Dröge <sebastian@centricular.com>"]
 edition = "2018"
+categories = ["multimedia"]
+keywords = ["multimedia", "audio", "dsp"]
+description = "Implementation of the EBU R128 loudness standard"
+repository = "https://github.com/sdroege/ebur128"
+homepage = "https://github.com/sdroege/ebur128"
+license = "MIT"
+readme = "README.md"
 
 [dependencies]
+bitflags = "1.0"
 
 [build-dependencies]
 cc = "1.0"

@@ -110,6 +110,8 @@ interp_create(unsigned int taps, unsigned int factor, unsigned int channels) {
   interpolator* interp;
   unsigned int j;
 
+  (void) errcode;
+
   interp = (interpolator*) calloc(1, sizeof(interpolator));
   CHECK_ERROR(!interp, 0, exit);
 

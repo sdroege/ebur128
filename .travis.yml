@@ -1,0 +1,13 @@
+dist: trusty
+sudo: false
+language: rust
+rust:
+  - stable
+  - beta
+  - nightly
+script:
+  - cargo test
+matrix:
+  allow_failures:
+    - rust: nightly
+

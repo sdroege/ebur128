@@ -9,7 +9,7 @@
 #include <stdlib.h>
 
 /* This can be replaced by any BSD-like queue implementation. */
-#include <sys/queue.h>
+#include "queue/sys/queue.h"
 
 #define CHECK_ERROR(condition, errorcode, goto_point)                          \
   if ((condition)) {                                                           \

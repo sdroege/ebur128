@@ -16,3 +16,19 @@ bitflags = "1.0"
 
 [build-dependencies]
 cc = "1.0"
+
+[dev-dependencies]
+criterion = "0.3"
+float-cmp = "0.8"
+ebur128-c = { package = "ebur128", version = "=0.1.1" }
+
+[features]
+internal-tests = []
+
+[[bench]]
+name = "interp"
+harness = false
+
+[[bench]]
+name = "ebur128"
+harness = false

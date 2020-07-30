@@ -18,3 +18,8 @@ mod ffi;
 
 mod ebur128;
 pub use self::ebur128::*;
+
+#[cfg(feature = "internal-tests")]
+pub mod interp;
+#[cfg(not(feature = "internal-tests"))]
+mod interp;

@@ -22,4 +22,9 @@ pub use self::ebur128::*;
 #[cfg(feature = "internal-tests")]
 pub mod interp;
 #[cfg(not(feature = "internal-tests"))]
-mod interp;
+pub(crate) mod interp;
+
+#[cfg(feature = "internal-tests")]
+pub mod true_peak;
+#[cfg(not(feature = "internal-tests"))]
+pub(crate) mod true_peak;

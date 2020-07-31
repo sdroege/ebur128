@@ -131,38 +131,6 @@ impl Interp {
     }
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn interp_create(taps: u32, factor: u32, channels: u32) -> *mut Interp {
-    Box::into_raw(Box::new(Interp::new(
-        taps as usize,
-        factor as usize,
-        channels,
-    )))
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn interp_process(
-    interp: *mut Interp,
-    frames: usize,
-    src: *const f32,
-    dst: *mut f32,
-) -> usize {
-    use std::slice;
-
-    let interp = &mut *interp;
-    let src = slice::from_raw_parts(src, interp.channels as usize * frames);
-    let dst = slice::from_raw_parts_mut(dst, interp.channels as usize * interp.factor * frames);
-
-    interp.process(src, dst);
-
-    interp.factor * frames
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn interp_destroy(interp: *mut Interp) {
-    drop(Box::from_raw(interp));
-}
-
 #[cfg(feature = "internal-tests")]
 use std::os::raw::c_void;
 

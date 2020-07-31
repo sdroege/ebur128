@@ -5,6 +5,7 @@ fn main() {
         b.define("TESTS", "1");
         b.compiler("clang");
         b.file("src/c/tests/interp.c");
+        b.file("src/c/tests/true_peak.c");
     }
 
     b.file("src/c/ebur128.c");

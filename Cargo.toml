@@ -30,5 +30,9 @@ name = "interp"
 harness = false
 
 [[bench]]
+name = "true_peak"
+harness = false
+
+[[bench]]
 name = "ebur128"
 harness = false

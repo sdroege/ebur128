@@ -85,31 +85,27 @@ impl Interp {
         assert!(self.filter.len() == self.factor);
         assert!(self.zi < self.delay);
 
-        for (src, dst) in src
-            .chunks_exact(self.channels as usize)
-            .zip(dst.chunks_exact_mut(self.channels as usize * self.factor))
-        {
-            for (chan, (src, z)) in src
-                .iter()
-                .zip(self.z.chunks_exact_mut(self.delay))
-                .enumerate()
-            {
+        let frames = src.len() / self.channels as usize;
+
+        for (src, (dst, z)) in src.chunks_exact(frames).zip(
+            dst.chunks_exact_mut(frames * self.factor)
+                .zip(self.z.chunks_exact_mut(self.delay)),
+        ) {
+            let mut zi = self.zi;
+
+            for (src, dst) in src.iter().zip(dst.chunks_exact_mut(self.factor)) {
                 // Add sample to delay buffer
                 //
                 // TODO Ringbuffer without bounds checks for z/zi
                 //
                 // Safety: zi is checked to be between 0 and self.delay
-                *unsafe { z.get_unchecked_mut(self.zi) } = *src;
+                *unsafe { z.get_unchecked_mut(zi) } = *src;
 
                 // Apply coefficients
-                for (filter, dst) in self
-                    .filter
-                    .iter()
-                    .zip(dst.chunks_exact_mut(self.channels as usize))
-                {
+                for (filter, dst) in self.filter.iter().zip(dst.iter_mut()) {
                     let mut acc = 0.0;
                     for (c, index) in &filter.coeff {
-                        let mut i = self.zi as i32 - *index as i32;
+                        let mut i = zi as i32 - *index as i32;
                         if i < 0 {
                             i += self.delay as i32;
                         }
@@ -117,17 +113,17 @@ impl Interp {
                         acc += *unsafe { z.get_unchecked(i as usize) } as f64 * c;
                     }
 
-                    // TODO: Figure out how to get rid of the bounds check here
-                    //
-                    // Safety: chan is by construction between 0 and self.channels
-                    *unsafe { dst.get_unchecked_mut(chan as usize) } = acc as f32;
+                    *dst = acc as f32;
+                }
+
+                zi += 1;
+                if zi == self.delay {
+                    zi = 0;
                 }
             }
-            self.zi += 1;
-            if self.zi == self.delay {
-                self.zi = 0;
-            }
         }
+
+        self.zi = (self.zi + frames) % self.delay;
     }
 }
 
@@ -154,18 +150,21 @@ mod tests {
     fn compare_c_impl() {
         use float_cmp::approx_eq;
 
-        let mut data = vec![0f32; 48_000 * 5 * 2];
-        let mut accumulator = 0.0;
+        const FRAMES: usize = 48_000 * 5;
+
+        let mut data = vec![0f32; FRAMES * 2];
         let step = 2.0 * std::f32::consts::PI * 440.0 / 48_000.0;
-        for out in data.chunks_exact_mut(2) {
-            let val = f32::sin(accumulator);
-            out[0] = val;
-            out[1] = val;
-            accumulator += step;
+        for out in data.chunks_exact_mut(FRAMES) {
+            let mut accumulator = 0.0;
+            for out in out.iter_mut() {
+                let val = f32::sin(accumulator);
+                *out = val;
+                accumulator += step;
+            }
         }
 
-        let mut data_out = vec![0.0f32; 48_000 * 5 * 2 * 2];
-        let mut data_out_c = vec![0.0f32; 48_000 * 5 * 2 * 2];
+        let mut data_out = vec![0.0f32; FRAMES * 2 * 2];
+        let mut data_out_c = vec![0.0f32; FRAMES * 2 * 2];
 
         {
             let mut interp = Interp::new(49, 2, 2);
@@ -173,9 +172,30 @@ mod tests {
         }
 
         unsafe {
+            // Need to interleave the input and deinterleave the output
+            let mut data_in_c_tmp = vec![0.0f32; FRAMES * 2];
+            let mut data_out_c_tmp = vec![0.0f32; FRAMES * 2 * 2];
+
+            for (c, i) in data.chunks_exact(FRAMES).enumerate() {
+                for (s, i) in i.iter().enumerate() {
+                    data_in_c_tmp[2 * s + c] = *i;
+                }
+            }
+
             let interp = interp_create_c(49, 2, 2);
-            interp_process_c(interp, 48_000 * 5, data.as_ptr(), data_out_c.as_mut_ptr());
+            interp_process_c(
+                interp,
+                FRAMES,
+                data_in_c_tmp.as_ptr(),
+                data_out_c_tmp.as_mut_ptr(),
+            );
             interp_destroy_c(interp);
+
+            for (c, out) in data_out_c.chunks_exact_mut(FRAMES * 2).enumerate() {
+                for (s, out) in out.iter_mut().enumerate() {
+                    *out = data_out_c_tmp[2 * s + c];
+                }
+            }
         }
 
         for (i, (r, c)) in data_out.iter().zip(data_out_c.iter()).enumerate() {

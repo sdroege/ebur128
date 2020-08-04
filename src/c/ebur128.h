@@ -246,19 +246,6 @@ int ebur128_add_frames_double(ebur128_state* st,
  *    - EBUR128_ERROR_INVALID_MODE if mode "EBUR128_MODE_I" has not been set.
  */
 int ebur128_loudness_global(ebur128_state* st, double* out);
-/** \brief Get global integrated loudness in LUFS across multiple instances.
- *
- *  @param sts array of library states.
- *  @param size length of sts
- *  @param out integrated loudness in LUFS. -HUGE_VAL if result is negative
- *             infinity.
- *  @return
- *    - EBUR128_SUCCESS on success.
- *    - EBUR128_ERROR_INVALID_MODE if mode "EBUR128_MODE_I" has not been set.
- */
-int ebur128_loudness_global_multiple(ebur128_state** sts,
-                                     size_t size,
-                                     double* out);
 
 /** \brief Get momentary loudness (last 400ms) in LUFS.
  *
@@ -310,23 +297,6 @@ int ebur128_loudness_window(ebur128_state* st,
  *    - EBUR128_ERROR_INVALID_MODE if mode "EBUR128_MODE_LRA" has not been set.
  */
 int ebur128_loudness_range(ebur128_state* st, double* out);
-/** \brief Get loudness range (LRA) in LU across multiple instances.
- *
- *  Calculates loudness range according to EBU 3342.
- *
- *  @param sts array of library states.
- *  @param size length of sts
- *  @param out loudness range (LRA) in LU. Will not be changed in case of
- *             error. EBUR128_ERROR_NOMEM or EBUR128_ERROR_INVALID_MODE will be
- *             returned in this case.
- *  @return
- *    - EBUR128_SUCCESS on success.
- *    - EBUR128_ERROR_NOMEM in case of memory allocation error.
- *    - EBUR128_ERROR_INVALID_MODE if mode "EBUR128_MODE_LRA" has not been set.
- */
-int ebur128_loudness_range_multiple(ebur128_state** sts,
-                                    size_t size,
-                                    double* out);
 
 /** \brief Get maximum sample peak from all frames that have been processed.
  *

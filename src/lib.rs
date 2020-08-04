@@ -28,3 +28,8 @@ pub(crate) mod interp;
 pub mod true_peak;
 #[cfg(not(feature = "internal-tests"))]
 pub(crate) mod true_peak;
+
+#[cfg(feature = "internal-tests")]
+pub mod history;
+#[cfg(not(feature = "internal-tests"))]
+pub(crate) mod history;

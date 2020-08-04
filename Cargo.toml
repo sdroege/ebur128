@@ -13,6 +13,7 @@ readme = "README.md"
 
 [dependencies]
 bitflags = "1.0"
+lazy_static = "1.0"
 
 [build-dependencies]
 cc = "1.0"
@@ -21,6 +22,9 @@ cc = "1.0"
 criterion = "0.3"
 float-cmp = "0.8"
 ebur128-c = { package = "ebur128", version = "=0.1.1" }
+quickcheck = "0.9"
+quickcheck_macros = "0.9"
+rand = "0.7"
 
 [features]
 internal-tests = []
@@ -31,6 +35,10 @@ harness = false
 
 [[bench]]
 name = "true_peak"
+harness = false
+
+[[bench]]
+name = "history"
 harness = false
 
 [[bench]]

@@ -146,13 +146,6 @@ extern "C" {
     pub fn ebur128_loudness_global(st: *mut ebur128_state, out: *mut f64) -> ::std::os::raw::c_int;
 }
 extern "C" {
-    pub fn ebur128_loudness_global_multiple(
-        sts: *mut *mut ebur128_state,
-        size: usize,
-        out: *mut f64,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
     pub fn ebur128_loudness_momentary(
         st: *mut ebur128_state,
         out: *mut f64,
@@ -173,13 +166,6 @@ extern "C" {
 }
 extern "C" {
     pub fn ebur128_loudness_range(st: *mut ebur128_state, out: *mut f64) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn ebur128_loudness_range_multiple(
-        sts: *mut *mut ebur128_state,
-        size: usize,
-        out: *mut f64,
-    ) -> ::std::os::raw::c_int;
 }
 extern "C" {
     pub fn ebur128_sample_peak(

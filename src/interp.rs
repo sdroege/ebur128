@@ -89,6 +89,10 @@ impl Interp {
         assert!(self.filter.len() == self.factor);
         assert!(self.zi < self.delay);
 
+        if src.is_empty() {
+            return;
+        }
+
         let frames = src.len() / self.channels as usize;
 
         for (src, (dst, z)) in src.chunks_exact(frames).zip(
@@ -149,57 +153,55 @@ extern "C" {
 #[cfg(all(test, feature = "internal-tests"))]
 mod tests {
     use super::*;
+    use crate::tests::Signal;
+    use quickcheck_macros::quickcheck;
 
-    #[test]
-    fn compare_c_impl() {
+    #[quickcheck]
+    fn compare_c_impl(signal: Signal<f32>) -> quickcheck::TestResult {
         use float_cmp::approx_eq;
 
-        const FRAMES: usize = 48_000 * 5;
+        let frames = signal.data.len() / signal.channels as usize;
+        let factor = if signal.rate < 96_000 {
+            4
+        } else if signal.rate < 192_000 {
+            2
+        } else {
+            return quickcheck::TestResult::discard();
+        };
 
-        let mut data = vec![0f32; FRAMES * 2];
-        let step = 2.0 * std::f32::consts::PI * 440.0 / 48_000.0;
-        for out in data.chunks_exact_mut(FRAMES) {
-            let mut accumulator = 0.0;
-            for out in out.iter_mut() {
-                let val = f32::sin(accumulator);
-                *out = val;
-                accumulator += step;
-            }
-        }
-
-        let mut data_out = vec![0.0f32; FRAMES * 2 * 2];
-        let mut data_out_c = vec![0.0f32; FRAMES * 2 * 2];
+        let mut data_out = vec![0.0f32; signal.data.len() * factor];
+        let mut data_out_c = vec![0.0f32; signal.data.len() * factor];
 
         {
-            let mut interp = Interp::new(49, 2, 2);
-            interp.process(&data, &mut data_out);
+            // Need to deinterleave the input and interleave the output
+            let mut data_in_tmp = vec![0.0f32; signal.data.len()];
+            let mut data_out_tmp = vec![0.0f32; signal.data.len() * factor];
+
+            for (c, out) in data_in_tmp.chunks_exact_mut(frames).enumerate() {
+                for (s, out) in out.iter_mut().enumerate() {
+                    *out = signal.data[signal.channels as usize * s + c];
+                }
+            }
+
+            let mut interp = Interp::new(49, factor, signal.channels);
+            interp.process(&data_in_tmp, &mut data_out_tmp);
+
+            for (c, i) in data_out_tmp.chunks_exact(frames * factor).enumerate() {
+                for (s, i) in i.iter().enumerate() {
+                    data_out[signal.channels as usize * s + c] = *i;
+                }
+            }
         }
 
         unsafe {
-            // Need to interleave the input and deinterleave the output
-            let mut data_in_c_tmp = vec![0.0f32; FRAMES * 2];
-            let mut data_out_c_tmp = vec![0.0f32; FRAMES * 2 * 2];
-
-            for (c, i) in data.chunks_exact(FRAMES).enumerate() {
-                for (s, i) in i.iter().enumerate() {
-                    data_in_c_tmp[2 * s + c] = *i;
-                }
-            }
-
-            let interp = interp_create_c(49, 2, 2);
+            let interp = interp_create_c(49, factor as u32, signal.channels);
             interp_process_c(
                 interp,
-                FRAMES,
-                data_in_c_tmp.as_ptr(),
-                data_out_c_tmp.as_mut_ptr(),
+                frames,
+                signal.data.as_ptr(),
+                data_out_c.as_mut_ptr(),
             );
             interp_destroy_c(interp);
-
-            for (c, out) in data_out_c.chunks_exact_mut(FRAMES * 2).enumerate() {
-                for (s, out) in out.iter_mut().enumerate() {
-                    *out = data_out_c_tmp[2 * s + c];
-                }
-            }
         }
 
         for (i, (r, c)) in data_out.iter().zip(data_out_c.iter()).enumerate() {
@@ -211,5 +213,7 @@ mod tests {
                 c
             );
         }
+
+        quickcheck::TestResult::passed()
     }
 }

@@ -13,9 +13,9 @@ impl TruePeak {
     pub fn new(rate: u32, channels: u32) -> Option<Self> {
         let samples_in_100ms = (rate + 5) / 10;
 
-        let (interp, interp_factor) = if rate < 96000 {
+        let (interp, interp_factor) = if rate < 96_000 {
             (Interp::new(49, 4, channels), 4)
-        } else if rate < 192000 {
+        } else if rate < 192_000 {
             (Interp::new(49, 2, channels), 2)
         } else {
             return None;
@@ -39,6 +39,10 @@ impl TruePeak {
         assert!(src.len() * self.interp.get_factor() <= self.buffer_output.len());
         assert!(self.buffer_input.len() * self.interp.get_factor() == self.buffer_output.len());
         assert!(peaks.len() == self.channels as usize);
+
+        if src.is_empty() {
+            return;
+        }
 
         // Deinterleave and convert to f32 for the resampler
         let frames = src.len() / self.channels as usize;
@@ -226,33 +230,37 @@ extern "C" {
 #[cfg(all(test, feature = "internal-tests"))]
 mod tests {
     use super::*;
+    use crate::tests::Signal;
+    use quickcheck_macros::quickcheck;
 
-    #[test]
-    fn compare_c_impl_i16() {
+    #[quickcheck]
+    fn compare_c_impl_i16(signal: Signal<i16>) -> quickcheck::TestResult {
         use float_cmp::approx_eq;
 
-        let mut data = vec![0i16; 19200 * 2];
-        let mut accumulator = 0.0;
-        let step = 2.0 * std::f32::consts::PI * 440.0 / 48_000.0;
-        for out in data.chunks_exact_mut(2) {
-            let val = f32::sin(accumulator) * std::i16::MAX as f32;
-            out[0] = val as i16;
-            out[1] = val as i16;
-            accumulator += step;
+        if signal.rate >= 192_000 {
+            return quickcheck::TestResult::discard();
         }
 
-        let mut peaks = vec![0.0f64; 2];
-        let mut peaks_c = vec![0.0f64; 2];
+        // Maximum of 400ms but our input is up to 5000ms, so distribute it evenly
+        // by shrinking accordingly.
+        let len = signal.data.len() / signal.channels as usize;
+        let len = std::cmp::min(2 * len / 25, 4 * ((signal.rate as usize + 5) / 10));
+
+        let mut peaks = vec![0.0f64; signal.channels as usize];
+        let mut peaks_c = vec![0.0f64; signal.channels as usize];
 
         {
-            let mut tp = TruePeak::new(48_000, 2).unwrap();
-            tp.check_true_peak(&data, &mut peaks);
+            let mut tp = TruePeak::new(signal.rate, signal.channels).unwrap();
+            tp.check_true_peak(
+                &signal.data[0..(len * signal.channels as usize)],
+                &mut peaks,
+            );
         }
 
         unsafe {
-            let tp = true_peak_create_c(48_000, 2);
+            let tp = true_peak_create_c(signal.rate, signal.channels);
             assert!(!tp.is_null());
-            true_peak_check_short_c(tp, 19200, data.as_ptr(), peaks_c.as_mut_ptr());
+            true_peak_check_short_c(tp, len, signal.data.as_ptr(), peaks_c.as_mut_ptr());
             true_peak_destroy_c(tp);
         }
 
@@ -265,34 +273,38 @@ mod tests {
                 c
             );
         }
+
+        quickcheck::TestResult::passed()
     }
 
-    #[test]
-    fn compare_c_impl_i32() {
+    #[quickcheck]
+    fn compare_c_impl_i32(signal: Signal<i32>) -> quickcheck::TestResult {
         use float_cmp::approx_eq;
 
-        let mut data = vec![0i32; 19200 * 2];
-        let mut accumulator = 0.0;
-        let step = 2.0 * std::f32::consts::PI * 440.0 / 48_000.0;
-        for out in data.chunks_exact_mut(2) {
-            let val = f32::sin(accumulator) * std::i32::MAX as f32;
-            out[0] = val as i32;
-            out[1] = val as i32;
-            accumulator += step;
+        if signal.rate >= 192_000 {
+            return quickcheck::TestResult::discard();
         }
 
-        let mut peaks = vec![0.0f64; 2];
-        let mut peaks_c = vec![0.0f64; 2];
+        // Maximum of 400ms but our input is up to 5000ms, so distribute it evenly
+        // by shrinking accordingly.
+        let len = signal.data.len() / signal.channels as usize;
+        let len = std::cmp::min(2 * len / 25, 4 * ((signal.rate as usize + 5) / 10));
+
+        let mut peaks = vec![0.0f64; signal.channels as usize];
+        let mut peaks_c = vec![0.0f64; signal.channels as usize];
 
         {
-            let mut tp = TruePeak::new(48_000, 2).unwrap();
-            tp.check_true_peak(&data, &mut peaks);
+            let mut tp = TruePeak::new(signal.rate, signal.channels).unwrap();
+            tp.check_true_peak(
+                &signal.data[0..(len * signal.channels as usize)],
+                &mut peaks,
+            );
         }
 
         unsafe {
-            let tp = true_peak_create_c(48_000, 2);
+            let tp = true_peak_create_c(signal.rate, signal.channels);
             assert!(!tp.is_null());
-            true_peak_check_int_c(tp, 19200, data.as_ptr(), peaks_c.as_mut_ptr());
+            true_peak_check_int_c(tp, len, signal.data.as_ptr(), peaks_c.as_mut_ptr());
             true_peak_destroy_c(tp);
         }
 
@@ -305,34 +317,38 @@ mod tests {
                 c
             );
         }
+
+        quickcheck::TestResult::passed()
     }
 
-    #[test]
-    fn compare_c_impl_f32() {
+    #[quickcheck]
+    fn compare_c_impl_f32(signal: Signal<f32>) -> quickcheck::TestResult {
         use float_cmp::approx_eq;
 
-        let mut data = vec![0.0f32; 19200 * 2];
-        let mut accumulator = 0.0;
-        let step = 2.0 * std::f32::consts::PI * 440.0 / 48_000.0;
-        for out in data.chunks_exact_mut(2) {
-            let val = f32::sin(accumulator);
-            out[0] = val;
-            out[1] = val;
-            accumulator += step;
+        if signal.rate >= 192_000 {
+            return quickcheck::TestResult::discard();
         }
 
-        let mut peaks = vec![0.0f64; 2];
-        let mut peaks_c = vec![0.0f64; 2];
+        // Maximum of 400ms but our input is up to 5000ms, so distribute it evenly
+        // by shrinking accordingly.
+        let len = signal.data.len() / signal.channels as usize;
+        let len = std::cmp::min(2 * len / 25, 4 * ((signal.rate as usize + 5) / 10));
+
+        let mut peaks = vec![0.0f64; signal.channels as usize];
+        let mut peaks_c = vec![0.0f64; signal.channels as usize];
 
         {
-            let mut tp = TruePeak::new(48_000, 2).unwrap();
-            tp.check_true_peak(&data, &mut peaks);
+            let mut tp = TruePeak::new(signal.rate, signal.channels).unwrap();
+            tp.check_true_peak(
+                &signal.data[0..(len * signal.channels as usize)],
+                &mut peaks,
+            );
         }
 
         unsafe {
-            let tp = true_peak_create_c(48_000, 2);
+            let tp = true_peak_create_c(signal.rate, signal.channels);
             assert!(!tp.is_null());
-            true_peak_check_float_c(tp, 19200, data.as_ptr(), peaks_c.as_mut_ptr());
+            true_peak_check_float_c(tp, len, signal.data.as_ptr(), peaks_c.as_mut_ptr());
             true_peak_destroy_c(tp);
         }
 
@@ -345,34 +361,38 @@ mod tests {
                 c
             );
         }
+
+        quickcheck::TestResult::passed()
     }
 
-    #[test]
-    fn compare_c_impl_f64() {
+    #[quickcheck]
+    fn compare_c_impl_f64(signal: Signal<f64>) -> quickcheck::TestResult {
         use float_cmp::approx_eq;
 
-        let mut data = vec![0.0f64; 19200 * 2];
-        let mut accumulator = 0.0;
-        let step = 2.0 * std::f32::consts::PI * 440.0 / 48_000.0;
-        for out in data.chunks_exact_mut(2) {
-            let val = f32::sin(accumulator);
-            out[0] = val as f64;
-            out[1] = val as f64;
-            accumulator += step;
+        if signal.rate >= 192_000 {
+            return quickcheck::TestResult::discard();
         }
 
-        let mut peaks = vec![0.0f64; 2];
-        let mut peaks_c = vec![0.0f64; 2];
+        // Maximum of 400ms but our input is up to 5000ms, so distribute it evenly
+        // by shrinking accordingly.
+        let len = signal.data.len() / signal.channels as usize;
+        let len = std::cmp::min(2 * len / 25, 4 * ((signal.rate as usize + 5) / 10));
+
+        let mut peaks = vec![0.0f64; signal.channels as usize];
+        let mut peaks_c = vec![0.0f64; signal.channels as usize];
 
         {
-            let mut tp = TruePeak::new(48_000, 2).unwrap();
-            tp.check_true_peak(&data, &mut peaks);
+            let mut tp = TruePeak::new(signal.rate, signal.channels).unwrap();
+            tp.check_true_peak(
+                &signal.data[0..(len * signal.channels as usize)],
+                &mut peaks,
+            );
         }
 
         unsafe {
-            let tp = true_peak_create_c(48_000, 2);
+            let tp = true_peak_create_c(signal.rate, signal.channels);
             assert!(!tp.is_null());
-            true_peak_check_double_c(tp, 19200, data.as_ptr(), peaks_c.as_mut_ptr());
+            true_peak_check_double_c(tp, len, signal.data.as_ptr(), peaks_c.as_mut_ptr());
             true_peak_destroy_c(tp);
         }
 
@@ -385,5 +405,7 @@ mod tests {
                 c
             );
         }
+
+        quickcheck::TestResult::passed()
     }
 }

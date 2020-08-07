@@ -44,3 +44,6 @@ harness = false
 [[bench]]
 name = "ebur128"
 harness = false
+
+[profile.dev]
+opt-level = 1

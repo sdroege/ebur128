@@ -425,6 +425,8 @@ impl Drop for EbuR128 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::tests::Signal;
+    use quickcheck_macros::quickcheck;
 
     macro_rules! assert_eq_f64(
         ($a:expr, $b:expr) => {
@@ -709,23 +711,14 @@ mod tests {
         assert_eq_f64!(ebu.relative_threshold().unwrap(), -10.682603991416554);
     }
 
-    #[test]
-    fn compare_c_impl_i16() {
-        let mut data = vec![0i16; 48_000 * 5 * 2];
-        let mut accumulator = 0.0;
-        let step = 2.0 * std::f32::consts::PI * 440.0 / 48_000.0;
-        for out in data.chunks_exact_mut(2) {
-            let val = f32::sin(accumulator) * (std::i16::MAX - 1) as f32;
-            out[0] = val as i16;
-            out[1] = val as i16;
-            accumulator += step;
-        }
+    #[quickcheck]
+    fn compare_c_impl_i16(signal: Signal<i16>) {
+        let mut ebu = EbuR128::new(signal.channels, signal.rate, Mode::all()).unwrap();
+        ebu.add_frames_i16(&signal.data).unwrap();
 
-        let mut ebu = EbuR128::new(2, 48_000, Mode::all()).unwrap();
-        ebu.add_frames_i16(&data).unwrap();
-
-        let mut ebu_c = ebur128_c::EbuR128::new(2, 48_000, ebur128_c::Mode::all()).unwrap();
-        ebu_c.add_frames_i16(&data).unwrap();
+        let mut ebu_c =
+            ebur128_c::EbuR128::new(signal.channels, signal.rate, ebur128_c::Mode::all()).unwrap();
+        ebu_c.add_frames_i16(&signal.data).unwrap();
 
         assert_eq_f64!(
             ebu.loudness_global().unwrap(),
@@ -748,27 +741,19 @@ mod tests {
             ebu_c.loudness_range().unwrap()
         );
 
-        assert_eq_f64!(ebu.sample_peak(0).unwrap(), ebu_c.sample_peak(0).unwrap());
-        assert_eq_f64!(ebu.sample_peak(1).unwrap(), ebu_c.sample_peak(1).unwrap());
-        assert_eq_f64!(
-            ebu.prev_sample_peak(0).unwrap(),
-            ebu_c.prev_sample_peak(0).unwrap()
-        );
-        assert_eq_f64!(
-            ebu.prev_sample_peak(1).unwrap(),
-            ebu_c.prev_sample_peak(1).unwrap()
-        );
+        for c in 0..signal.channels {
+            assert_eq_f64!(ebu.sample_peak(c).unwrap(), ebu_c.sample_peak(c).unwrap());
+            assert_eq_f64!(
+                ebu.prev_sample_peak(c).unwrap(),
+                ebu_c.prev_sample_peak(c).unwrap()
+            );
 
-        assert_eq_f64!(ebu.true_peak(0).unwrap(), ebu_c.true_peak(0).unwrap());
-        assert_eq_f64!(ebu.true_peak(1).unwrap(), ebu_c.true_peak(1).unwrap());
-        assert_eq_f64!(
-            ebu.prev_true_peak(0).unwrap(),
-            ebu_c.prev_true_peak(0).unwrap()
-        );
-        assert_eq_f64!(
-            ebu.prev_true_peak(1).unwrap(),
-            ebu_c.prev_true_peak(1).unwrap()
-        );
+            assert_eq_f64!(ebu.true_peak(c).unwrap(), ebu_c.true_peak(c).unwrap());
+            assert_eq_f64!(
+                ebu.prev_true_peak(c).unwrap(),
+                ebu_c.prev_true_peak(c).unwrap()
+            );
+        }
 
         assert_eq_f64!(
             ebu.relative_threshold().unwrap(),
@@ -776,23 +761,14 @@ mod tests {
         );
     }
 
-    #[test]
-    fn compare_c_impl_i32() {
-        let mut data = vec![0i32; 48_000 * 5 * 2];
-        let mut accumulator = 0.0;
-        let step = 2.0 * std::f32::consts::PI * 440.0 / 48_000.0;
-        for out in data.chunks_exact_mut(2) {
-            let val = f32::sin(accumulator) * (std::i32::MAX - 1) as f32;
-            out[0] = val as i32;
-            out[1] = val as i32;
-            accumulator += step;
-        }
+    #[quickcheck]
+    fn compare_c_impl_i32(signal: Signal<i32>) {
+        let mut ebu = EbuR128::new(signal.channels, signal.rate, Mode::all()).unwrap();
+        ebu.add_frames_i32(&signal.data).unwrap();
 
-        let mut ebu = EbuR128::new(2, 48_000, Mode::all()).unwrap();
-        ebu.add_frames_i32(&data).unwrap();
-
-        let mut ebu_c = ebur128_c::EbuR128::new(2, 48_000, ebur128_c::Mode::all()).unwrap();
-        ebu_c.add_frames_i32(&data).unwrap();
+        let mut ebu_c =
+            ebur128_c::EbuR128::new(signal.channels, signal.rate, ebur128_c::Mode::all()).unwrap();
+        ebu_c.add_frames_i32(&signal.data).unwrap();
 
         assert_eq_f64!(
             ebu.loudness_global().unwrap(),
@@ -815,27 +791,19 @@ mod tests {
             ebu_c.loudness_range().unwrap()
         );
 
-        assert_eq_f64!(ebu.sample_peak(0).unwrap(), ebu_c.sample_peak(0).unwrap());
-        assert_eq_f64!(ebu.sample_peak(1).unwrap(), ebu_c.sample_peak(1).unwrap());
-        assert_eq_f64!(
-            ebu.prev_sample_peak(0).unwrap(),
-            ebu_c.prev_sample_peak(0).unwrap()
-        );
-        assert_eq_f64!(
-            ebu.prev_sample_peak(1).unwrap(),
-            ebu_c.prev_sample_peak(1).unwrap()
-        );
+        for c in 0..signal.channels {
+            assert_eq_f64!(ebu.sample_peak(c).unwrap(), ebu_c.sample_peak(c).unwrap());
+            assert_eq_f64!(
+                ebu.prev_sample_peak(c).unwrap(),
+                ebu_c.prev_sample_peak(c).unwrap()
+            );
 
-        assert_eq_f64!(ebu.true_peak(0).unwrap(), ebu_c.true_peak(0).unwrap());
-        assert_eq_f64!(ebu.true_peak(1).unwrap(), ebu_c.true_peak(1).unwrap());
-        assert_eq_f64!(
-            ebu.prev_true_peak(0).unwrap(),
-            ebu_c.prev_true_peak(0).unwrap()
-        );
-        assert_eq_f64!(
-            ebu.prev_true_peak(1).unwrap(),
-            ebu_c.prev_true_peak(1).unwrap()
-        );
+            assert_eq_f64!(ebu.true_peak(c).unwrap(), ebu_c.true_peak(c).unwrap());
+            assert_eq_f64!(
+                ebu.prev_true_peak(c).unwrap(),
+                ebu_c.prev_true_peak(c).unwrap()
+            );
+        }
 
         assert_eq_f64!(
             ebu.relative_threshold().unwrap(),
@@ -843,23 +811,14 @@ mod tests {
         );
     }
 
-    #[test]
-    fn compare_c_impl_f32() {
-        let mut data = vec![0.0f32; 48_000 * 5 * 2];
-        let mut accumulator = 0.0;
-        let step = 2.0 * std::f32::consts::PI * 440.0 / 48_000.0;
-        for out in data.chunks_exact_mut(2) {
-            let val = f32::sin(accumulator);
-            out[0] = val;
-            out[1] = val;
-            accumulator += step;
-        }
+    #[quickcheck]
+    fn compare_c_impl_f32(signal: Signal<f32>) {
+        let mut ebu = EbuR128::new(signal.channels, signal.rate, Mode::all()).unwrap();
+        ebu.add_frames_f32(&signal.data).unwrap();
 
-        let mut ebu = EbuR128::new(2, 48_000, Mode::all()).unwrap();
-        ebu.add_frames_f32(&data).unwrap();
-
-        let mut ebu_c = ebur128_c::EbuR128::new(2, 48_000, ebur128_c::Mode::all()).unwrap();
-        ebu_c.add_frames_f32(&data).unwrap();
+        let mut ebu_c =
+            ebur128_c::EbuR128::new(signal.channels, signal.rate, ebur128_c::Mode::all()).unwrap();
+        ebu_c.add_frames_f32(&signal.data).unwrap();
 
         assert_eq_f64!(
             ebu.loudness_global().unwrap(),
@@ -882,27 +841,19 @@ mod tests {
             ebu_c.loudness_range().unwrap()
         );
 
-        assert_eq_f64!(ebu.sample_peak(0).unwrap(), ebu_c.sample_peak(0).unwrap());
-        assert_eq_f64!(ebu.sample_peak(1).unwrap(), ebu_c.sample_peak(1).unwrap());
-        assert_eq_f64!(
-            ebu.prev_sample_peak(0).unwrap(),
-            ebu_c.prev_sample_peak(0).unwrap()
-        );
-        assert_eq_f64!(
-            ebu.prev_sample_peak(1).unwrap(),
-            ebu_c.prev_sample_peak(1).unwrap()
-        );
+        for c in 0..signal.channels {
+            assert_eq_f64!(ebu.sample_peak(c).unwrap(), ebu_c.sample_peak(c).unwrap());
+            assert_eq_f64!(
+                ebu.prev_sample_peak(c).unwrap(),
+                ebu_c.prev_sample_peak(c).unwrap()
+            );
 
-        assert_eq_f64!(ebu.true_peak(0).unwrap(), ebu_c.true_peak(0).unwrap());
-        assert_eq_f64!(ebu.true_peak(1).unwrap(), ebu_c.true_peak(1).unwrap());
-        assert_eq_f64!(
-            ebu.prev_true_peak(0).unwrap(),
-            ebu_c.prev_true_peak(0).unwrap()
-        );
-        assert_eq_f64!(
-            ebu.prev_true_peak(1).unwrap(),
-            ebu_c.prev_true_peak(1).unwrap()
-        );
+            assert_eq_f64!(ebu.true_peak(c).unwrap(), ebu_c.true_peak(c).unwrap());
+            assert_eq_f64!(
+                ebu.prev_true_peak(c).unwrap(),
+                ebu_c.prev_true_peak(c).unwrap()
+            );
+        }
 
         assert_eq_f64!(
             ebu.relative_threshold().unwrap(),
@@ -910,23 +861,14 @@ mod tests {
         );
     }
 
-    #[test]
-    fn compare_c_impl_f64() {
-        let mut data = vec![0.0f64; 48_000 * 5 * 2];
-        let mut accumulator = 0.0;
-        let step = 2.0 * std::f64::consts::PI * 440.0 / 48_000.0;
-        for out in data.chunks_exact_mut(2) {
-            let val = f64::sin(accumulator);
-            out[0] = val;
-            out[1] = val;
-            accumulator += step;
-        }
+    #[quickcheck]
+    fn compare_c_impl_f64(signal: Signal<f64>) {
+        let mut ebu = EbuR128::new(signal.channels, signal.rate, Mode::all()).unwrap();
+        ebu.add_frames_f64(&signal.data).unwrap();
 
-        let mut ebu = EbuR128::new(2, 48_000, Mode::all()).unwrap();
-        ebu.add_frames_f64(&data).unwrap();
-
-        let mut ebu_c = ebur128_c::EbuR128::new(2, 48_000, ebur128_c::Mode::all()).unwrap();
-        ebu_c.add_frames_f64(&data).unwrap();
+        let mut ebu_c =
+            ebur128_c::EbuR128::new(signal.channels, signal.rate, ebur128_c::Mode::all()).unwrap();
+        ebu_c.add_frames_f64(&signal.data).unwrap();
 
         assert_eq_f64!(
             ebu.loudness_global().unwrap(),
@@ -949,27 +891,19 @@ mod tests {
             ebu_c.loudness_range().unwrap()
         );
 
-        assert_eq_f64!(ebu.sample_peak(0).unwrap(), ebu_c.sample_peak(0).unwrap());
-        assert_eq_f64!(ebu.sample_peak(1).unwrap(), ebu_c.sample_peak(1).unwrap());
-        assert_eq_f64!(
-            ebu.prev_sample_peak(0).unwrap(),
-            ebu_c.prev_sample_peak(0).unwrap()
-        );
-        assert_eq_f64!(
-            ebu.prev_sample_peak(1).unwrap(),
-            ebu_c.prev_sample_peak(1).unwrap()
-        );
+        for c in 0..signal.channels {
+            assert_eq_f64!(ebu.sample_peak(c).unwrap(), ebu_c.sample_peak(c).unwrap());
+            assert_eq_f64!(
+                ebu.prev_sample_peak(c).unwrap(),
+                ebu_c.prev_sample_peak(c).unwrap()
+            );
 
-        assert_eq_f64!(ebu.true_peak(0).unwrap(), ebu_c.true_peak(0).unwrap());
-        assert_eq_f64!(ebu.true_peak(1).unwrap(), ebu_c.true_peak(1).unwrap());
-        assert_eq_f64!(
-            ebu.prev_true_peak(0).unwrap(),
-            ebu_c.prev_true_peak(0).unwrap()
-        );
-        assert_eq_f64!(
-            ebu.prev_true_peak(1).unwrap(),
-            ebu_c.prev_true_peak(1).unwrap()
-        );
+            assert_eq_f64!(ebu.true_peak(c).unwrap(), ebu_c.true_peak(c).unwrap());
+            assert_eq_f64!(
+                ebu.prev_true_peak(c).unwrap(),
+                ebu_c.prev_true_peak(c).unwrap()
+            );
+        }
 
         assert_eq_f64!(
             ebu.relative_threshold().unwrap(),
@@ -977,28 +911,19 @@ mod tests {
         );
     }
 
-    #[test]
-    fn compare_c_impl_i16_no_histogram() {
-        let mut data = vec![0i16; 48_000 * 5 * 2];
-        let mut accumulator = 0.0;
-        let step = 2.0 * std::f32::consts::PI * 440.0 / 48_000.0;
-        for out in data.chunks_exact_mut(2) {
-            let val = f32::sin(accumulator) * (std::i16::MAX - 1) as f32;
-            out[0] = val as i16;
-            out[1] = val as i16;
-            accumulator += step;
-        }
-
-        let mut ebu = EbuR128::new(2, 48_000, Mode::all() & !Mode::HISTOGRAM).unwrap();
-        ebu.add_frames_i16(&data).unwrap();
+    #[quickcheck]
+    fn compare_c_impl_i16_no_histogram(signal: Signal<i16>) {
+        let mut ebu =
+            EbuR128::new(signal.channels, signal.rate, Mode::all() & !Mode::HISTOGRAM).unwrap();
+        ebu.add_frames_i16(&signal.data).unwrap();
 
         let mut ebu_c = ebur128_c::EbuR128::new(
-            2,
-            48_000,
+            signal.channels,
+            signal.rate,
             ebur128_c::Mode::all() & !ebur128_c::Mode::HISTOGRAM,
         )
         .unwrap();
-        ebu_c.add_frames_i16(&data).unwrap();
+        ebu_c.add_frames_i16(&signal.data).unwrap();
 
         assert_eq_f64!(
             ebu.loudness_global().unwrap(),
@@ -1021,27 +946,19 @@ mod tests {
             ebu_c.loudness_range().unwrap()
         );
 
-        assert_eq_f64!(ebu.sample_peak(0).unwrap(), ebu_c.sample_peak(0).unwrap());
-        assert_eq_f64!(ebu.sample_peak(1).unwrap(), ebu_c.sample_peak(1).unwrap());
-        assert_eq_f64!(
-            ebu.prev_sample_peak(0).unwrap(),
-            ebu_c.prev_sample_peak(0).unwrap()
-        );
-        assert_eq_f64!(
-            ebu.prev_sample_peak(1).unwrap(),
-            ebu_c.prev_sample_peak(1).unwrap()
-        );
+        for c in 0..signal.channels {
+            assert_eq_f64!(ebu.sample_peak(c).unwrap(), ebu_c.sample_peak(c).unwrap());
+            assert_eq_f64!(
+                ebu.prev_sample_peak(c).unwrap(),
+                ebu_c.prev_sample_peak(c).unwrap()
+            );
 
-        assert_eq_f64!(ebu.true_peak(0).unwrap(), ebu_c.true_peak(0).unwrap());
-        assert_eq_f64!(ebu.true_peak(1).unwrap(), ebu_c.true_peak(1).unwrap());
-        assert_eq_f64!(
-            ebu.prev_true_peak(0).unwrap(),
-            ebu_c.prev_true_peak(0).unwrap()
-        );
-        assert_eq_f64!(
-            ebu.prev_true_peak(1).unwrap(),
-            ebu_c.prev_true_peak(1).unwrap()
-        );
+            assert_eq_f64!(ebu.true_peak(c).unwrap(), ebu_c.true_peak(c).unwrap());
+            assert_eq_f64!(
+                ebu.prev_true_peak(c).unwrap(),
+                ebu_c.prev_true_peak(c).unwrap()
+            );
+        }
 
         assert_eq_f64!(
             ebu.relative_threshold().unwrap(),
@@ -1049,28 +966,19 @@ mod tests {
         );
     }
 
-    #[test]
-    fn compare_c_impl_i32_no_histogram() {
-        let mut data = vec![0i32; 48_000 * 5 * 2];
-        let mut accumulator = 0.0;
-        let step = 2.0 * std::f32::consts::PI * 440.0 / 48_000.0;
-        for out in data.chunks_exact_mut(2) {
-            let val = f32::sin(accumulator) * (std::i32::MAX - 1) as f32;
-            out[0] = val as i32;
-            out[1] = val as i32;
-            accumulator += step;
-        }
-
-        let mut ebu = EbuR128::new(2, 48_000, Mode::all() & !Mode::HISTOGRAM).unwrap();
-        ebu.add_frames_i32(&data).unwrap();
+    #[quickcheck]
+    fn compare_c_impl_i32_no_histogram(signal: Signal<i32>) {
+        let mut ebu =
+            EbuR128::new(signal.channels, signal.rate, Mode::all() & !Mode::HISTOGRAM).unwrap();
+        ebu.add_frames_i32(&signal.data).unwrap();
 
         let mut ebu_c = ebur128_c::EbuR128::new(
-            2,
-            48_000,
+            signal.channels,
+            signal.rate,
             ebur128_c::Mode::all() & !ebur128_c::Mode::HISTOGRAM,
         )
         .unwrap();
-        ebu_c.add_frames_i32(&data).unwrap();
+        ebu_c.add_frames_i32(&signal.data).unwrap();
 
         assert_eq_f64!(
             ebu.loudness_global().unwrap(),
@@ -1093,27 +1001,19 @@ mod tests {
             ebu_c.loudness_range().unwrap()
         );
 
-        assert_eq_f64!(ebu.sample_peak(0).unwrap(), ebu_c.sample_peak(0).unwrap());
-        assert_eq_f64!(ebu.sample_peak(1).unwrap(), ebu_c.sample_peak(1).unwrap());
-        assert_eq_f64!(
-            ebu.prev_sample_peak(0).unwrap(),
-            ebu_c.prev_sample_peak(0).unwrap()
-        );
-        assert_eq_f64!(
-            ebu.prev_sample_peak(1).unwrap(),
-            ebu_c.prev_sample_peak(1).unwrap()
-        );
+        for c in 0..signal.channels {
+            assert_eq_f64!(ebu.sample_peak(c).unwrap(), ebu_c.sample_peak(c).unwrap());
+            assert_eq_f64!(
+                ebu.prev_sample_peak(c).unwrap(),
+                ebu_c.prev_sample_peak(c).unwrap()
+            );
 
-        assert_eq_f64!(ebu.true_peak(0).unwrap(), ebu_c.true_peak(0).unwrap());
-        assert_eq_f64!(ebu.true_peak(1).unwrap(), ebu_c.true_peak(1).unwrap());
-        assert_eq_f64!(
-            ebu.prev_true_peak(0).unwrap(),
-            ebu_c.prev_true_peak(0).unwrap()
-        );
-        assert_eq_f64!(
-            ebu.prev_true_peak(1).unwrap(),
-            ebu_c.prev_true_peak(1).unwrap()
-        );
+            assert_eq_f64!(ebu.true_peak(c).unwrap(), ebu_c.true_peak(c).unwrap());
+            assert_eq_f64!(
+                ebu.prev_true_peak(c).unwrap(),
+                ebu_c.prev_true_peak(c).unwrap()
+            );
+        }
 
         assert_eq_f64!(
             ebu.relative_threshold().unwrap(),
@@ -1121,28 +1021,19 @@ mod tests {
         );
     }
 
-    #[test]
-    fn compare_c_impl_f32_no_histogram() {
-        let mut data = vec![0.0f32; 48_000 * 5 * 2];
-        let mut accumulator = 0.0;
-        let step = 2.0 * std::f32::consts::PI * 440.0 / 48_000.0;
-        for out in data.chunks_exact_mut(2) {
-            let val = f32::sin(accumulator);
-            out[0] = val;
-            out[1] = val;
-            accumulator += step;
-        }
-
-        let mut ebu = EbuR128::new(2, 48_000, Mode::all() & !Mode::HISTOGRAM).unwrap();
-        ebu.add_frames_f32(&data).unwrap();
+    #[quickcheck]
+    fn compare_c_impl_f32_no_histogram(signal: Signal<f32>) {
+        let mut ebu =
+            EbuR128::new(signal.channels, signal.rate, Mode::all() & !Mode::HISTOGRAM).unwrap();
+        ebu.add_frames_f32(&signal.data).unwrap();
 
         let mut ebu_c = ebur128_c::EbuR128::new(
-            2,
-            48_000,
+            signal.channels,
+            signal.rate,
             ebur128_c::Mode::all() & !ebur128_c::Mode::HISTOGRAM,
         )
         .unwrap();
-        ebu_c.add_frames_f32(&data).unwrap();
+        ebu_c.add_frames_f32(&signal.data).unwrap();
 
         assert_eq_f64!(
             ebu.loudness_global().unwrap(),
@@ -1165,27 +1056,19 @@ mod tests {
             ebu_c.loudness_range().unwrap()
         );
 
-        assert_eq_f64!(ebu.sample_peak(0).unwrap(), ebu_c.sample_peak(0).unwrap());
-        assert_eq_f64!(ebu.sample_peak(1).unwrap(), ebu_c.sample_peak(1).unwrap());
-        assert_eq_f64!(
-            ebu.prev_sample_peak(0).unwrap(),
-            ebu_c.prev_sample_peak(0).unwrap()
-        );
-        assert_eq_f64!(
-            ebu.prev_sample_peak(1).unwrap(),
-            ebu_c.prev_sample_peak(1).unwrap()
-        );
+        for c in 0..signal.channels {
+            assert_eq_f64!(ebu.sample_peak(c).unwrap(), ebu_c.sample_peak(c).unwrap());
+            assert_eq_f64!(
+                ebu.prev_sample_peak(c).unwrap(),
+                ebu_c.prev_sample_peak(c).unwrap()
+            );
 
-        assert_eq_f64!(ebu.true_peak(0).unwrap(), ebu_c.true_peak(0).unwrap());
-        assert_eq_f64!(ebu.true_peak(1).unwrap(), ebu_c.true_peak(1).unwrap());
-        assert_eq_f64!(
-            ebu.prev_true_peak(0).unwrap(),
-            ebu_c.prev_true_peak(0).unwrap()
-        );
-        assert_eq_f64!(
-            ebu.prev_true_peak(1).unwrap(),
-            ebu_c.prev_true_peak(1).unwrap()
-        );
+            assert_eq_f64!(ebu.true_peak(c).unwrap(), ebu_c.true_peak(c).unwrap());
+            assert_eq_f64!(
+                ebu.prev_true_peak(c).unwrap(),
+                ebu_c.prev_true_peak(c).unwrap()
+            );
+        }
 
         assert_eq_f64!(
             ebu.relative_threshold().unwrap(),
@@ -1193,28 +1076,19 @@ mod tests {
         );
     }
 
-    #[test]
-    fn compare_c_impl_f64_no_histogram() {
-        let mut data = vec![0.0f64; 48_000 * 5 * 2];
-        let mut accumulator = 0.0;
-        let step = 2.0 * std::f64::consts::PI * 440.0 / 48_000.0;
-        for out in data.chunks_exact_mut(2) {
-            let val = f64::sin(accumulator);
-            out[0] = val;
-            out[1] = val;
-            accumulator += step;
-        }
-
-        let mut ebu = EbuR128::new(2, 48_000, Mode::all() & !Mode::HISTOGRAM).unwrap();
-        ebu.add_frames_f64(&data).unwrap();
+    #[quickcheck]
+    fn compare_c_impl_f64_no_histogram(signal: Signal<f64>) {
+        let mut ebu =
+            EbuR128::new(signal.channels, signal.rate, Mode::all() & !Mode::HISTOGRAM).unwrap();
+        ebu.add_frames_f64(&signal.data).unwrap();
 
         let mut ebu_c = ebur128_c::EbuR128::new(
-            2,
-            48_000,
+            signal.channels,
+            signal.rate,
             ebur128_c::Mode::all() & !ebur128_c::Mode::HISTOGRAM,
         )
         .unwrap();
-        ebu_c.add_frames_f64(&data).unwrap();
+        ebu_c.add_frames_f64(&signal.data).unwrap();
 
         assert_eq_f64!(
             ebu.loudness_global().unwrap(),
@@ -1237,27 +1111,19 @@ mod tests {
             ebu_c.loudness_range().unwrap()
         );
 
-        assert_eq_f64!(ebu.sample_peak(0).unwrap(), ebu_c.sample_peak(0).unwrap());
-        assert_eq_f64!(ebu.sample_peak(1).unwrap(), ebu_c.sample_peak(1).unwrap());
-        assert_eq_f64!(
-            ebu.prev_sample_peak(0).unwrap(),
-            ebu_c.prev_sample_peak(0).unwrap()
-        );
-        assert_eq_f64!(
-            ebu.prev_sample_peak(1).unwrap(),
-            ebu_c.prev_sample_peak(1).unwrap()
-        );
+        for c in 0..signal.channels {
+            assert_eq_f64!(ebu.sample_peak(c).unwrap(), ebu_c.sample_peak(c).unwrap());
+            assert_eq_f64!(
+                ebu.prev_sample_peak(c).unwrap(),
+                ebu_c.prev_sample_peak(c).unwrap()
+            );
 
-        assert_eq_f64!(ebu.true_peak(0).unwrap(), ebu_c.true_peak(0).unwrap());
-        assert_eq_f64!(ebu.true_peak(1).unwrap(), ebu_c.true_peak(1).unwrap());
-        assert_eq_f64!(
-            ebu.prev_true_peak(0).unwrap(),
-            ebu_c.prev_true_peak(0).unwrap()
-        );
-        assert_eq_f64!(
-            ebu.prev_true_peak(1).unwrap(),
-            ebu_c.prev_true_peak(1).unwrap()
-        );
+            assert_eq_f64!(ebu.true_peak(c).unwrap(), ebu_c.true_peak(c).unwrap());
+            assert_eq_f64!(
+                ebu.prev_true_peak(c).unwrap(),
+                ebu_c.prev_true_peak(c).unwrap()
+            );
+        }
 
         assert_eq_f64!(
             ebu.relative_threshold().unwrap(),

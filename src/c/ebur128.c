@@ -17,16 +17,18 @@
 #define EBUR128_MAX(a, b) (((a) > (b)) ? (a) : (b))
 
 #define ALMOST_ZERO 0.000001
-#define FILTER_STATE_SIZE 5
 
 /* Rust implementations */
-typedef void * true_peak;
-extern true_peak* true_peak_create(unsigned int rate, unsigned int channels);
-extern void true_peak_destroy(true_peak* tp);
-extern void true_peak_check_short(true_peak* tp, size_t frames, const int16_t* src, double* peaks);
-extern void true_peak_check_int(true_peak* tp, size_t frames, const int32_t* src, double* peaks);
-extern void true_peak_check_float(true_peak* tp, size_t frames, const float* src, double* peaks);
-extern void true_peak_check_double(true_peak* tp, size_t frames, const double* src, double* peaks);
+typedef void * filter;
+extern filter* filter_create(unsigned int rate, unsigned int channels, int calculate_sample_peak, int calculate_true_peak);
+extern void filter_destroy(filter* f);
+extern void filter_process_short(filter* f, size_t frames, const int16_t* src, double* dest, const int* channel_map);
+extern void filter_process_int(filter* f, size_t frames, const int32_t* src, double* dest, const int* channel_map);
+extern void filter_process_float(filter* f, size_t frames, const float* src, double* dest, const int* channel_map);
+extern void filter_process_double(filter* f, size_t frames, const double* src, double* dest, const int* channel_map);
+extern const double* filter_sample_peak(const filter *f);
+extern const double* filter_true_peak(const filter *f);
+extern void filter_reset_peaks(filter *f);
 
 typedef void * history;
 extern history* history_create(int use_histogram, size_t max);
@@ -36,9 +38,6 @@ extern double history_gated_loudness(const history* hist);
 extern double history_relative_threshold(const history* hist);
 extern double history_loudness_range(const history* hist);
 extern void history_destroy(history *hist);
-
-/** BS.1770 filter state. */
-typedef double filter_state[FILTER_STATE_SIZE];
 
 struct ebur128_state_internal {
   /** Filtered audio data (used as ring buffer). */
@@ -55,23 +54,17 @@ struct ebur128_state_internal {
   int* channel_map;
   /** How many samples fit in 100ms (rounded). */
   unsigned long samples_in_100ms;
-  /** BS.1770 filter coefficients (nominator). */
-  double b[5];
-  /** BS.1770 filter coefficients (denominator). */
-  double a[5];
-  /** one filter_state per channel. */
-  filter_state* v;
+
+  filter* f;
   history* block_energy_history;
   history* short_term_block_energy_history;
+
   /** Keeps track of when a new short term block is needed. */
   size_t short_term_frame_counter;
   /** Maximum sample peak, one per channel */
   double* sample_peak;
-  double* prev_sample_peak;
   /** Maximum true peak, one per channel */
   double* true_peak;
-  double* prev_true_peak;
-  true_peak* tp;
   /** The maximum window duration in ms. */
   unsigned long window;
   unsigned long history;
@@ -82,66 +75,6 @@ static double relative_gate = -10.0;
 /* Those will be calculated when initializing the library */
 static double relative_gate_factor;
 static double minus_twenty_decibels;
-
-static int ebur128_init_filter(ebur128_state* st) {
-  int errcode = EBUR128_SUCCESS;
-  int i, j;
-
-  double f0 = 1681.974450955533;
-  double G = 3.999843853973347;
-  double Q = 0.7071752369554196;
-
-  double K = tan(M_PI * f0 / (double) st->samplerate);
-  double Vh = pow(10.0, G / 20.0);
-  double Vb = pow(Vh, 0.4996667741545416);
-
-  double pb[3] = { 0.0, 0.0, 0.0 };
-  double pa[3] = { 1.0, 0.0, 0.0 };
-  double rb[3] = { 1.0, -2.0, 1.0 };
-  double ra[3] = { 1.0, 0.0, 0.0 };
-
-  double a0 = 1.0 + K / Q + K * K;
-  pb[0] = (Vh + Vb * K / Q + K * K) / a0;
-  pb[1] = 2.0 * (K * K - Vh) / a0;
-  pb[2] = (Vh - Vb * K / Q + K * K) / a0;
-  pa[1] = 2.0 * (K * K - 1.0) / a0;
-  pa[2] = (1.0 - K / Q + K * K) / a0;
-
-  /* fprintf(stderr, "%.14f %.14f %.14f %.14f %.14f\n",
-                     b1[0], b1[1], b1[2], a1[1], a1[2]); */
-
-  f0 = 38.13547087602444;
-  Q = 0.5003270373238773;
-  K = tan(M_PI * f0 / (double) st->samplerate);
-
-  ra[1] = 2.0 * (K * K - 1.0) / (1.0 + K / Q + K * K);
-  ra[2] = (1.0 - K / Q + K * K) / (1.0 + K / Q + K * K);
-
-  /* fprintf(stderr, "%.14f %.14f\n", a2[1], a2[2]); */
-
-  st->d->b[0] = pb[0] * rb[0];
-  st->d->b[1] = pb[0] * rb[1] + pb[1] * rb[0];
-  st->d->b[2] = pb[0] * rb[2] + pb[1] * rb[1] + pb[2] * rb[0];
-  st->d->b[3] = pb[1] * rb[2] + pb[2] * rb[1];
-  st->d->b[4] = pb[2] * rb[2];
-
-  st->d->a[0] = pa[0] * ra[0];
-  st->d->a[1] = pa[0] * ra[1] + pa[1] * ra[0];
-  st->d->a[2] = pa[0] * ra[2] + pa[1] * ra[1] + pa[2] * ra[0];
-  st->d->a[3] = pa[1] * ra[2] + pa[2] * ra[1];
-  st->d->a[4] = pa[2] * ra[2];
-
-  st->d->v = (filter_state*) malloc(st->channels * sizeof(filter_state));
-  CHECK_ERROR(!st->d->v, EBUR128_ERROR_NOMEM, exit);
-  for (i = 0; i < (int) st->channels; ++i) {
-    for (j = 0; j < FILTER_STATE_SIZE; ++j) {
-      st->d->v[i][j] = 0.0;
-    }
-  }
-
-exit:
-  return errcode;
-}
 
 static int ebur128_init_channel_map(ebur128_state* st) {
   size_t i;
@@ -226,17 +159,11 @@ ebur128_init(unsigned int channels, unsigned long samplerate, int mode) {
 
   st->d->sample_peak = (double*) malloc(channels * sizeof(double));
   CHECK_ERROR(!st->d->sample_peak, 0, free_channel_map)
-  st->d->prev_sample_peak = (double*) malloc(channels * sizeof(double));
-  CHECK_ERROR(!st->d->prev_sample_peak, 0, free_sample_peak)
   st->d->true_peak = (double*) malloc(channels * sizeof(double));
-  CHECK_ERROR(!st->d->true_peak, 0, free_prev_sample_peak)
-  st->d->prev_true_peak = (double*) malloc(channels * sizeof(double));
-  CHECK_ERROR(!st->d->prev_true_peak, 0, free_true_peak)
+  CHECK_ERROR(!st->d->true_peak, 0, free_sample_peak)
   for (i = 0; i < channels; ++i) {
     st->d->sample_peak[i] = 0.0;
-    st->d->prev_sample_peak[i] = 0.0;
     st->d->true_peak[i] = 0.0;
-    st->d->prev_true_peak[i] = 0.0;
   }
 
   st->d->history = ULONG_MAX;
@@ -248,7 +175,7 @@ ebur128_init(unsigned int channels, unsigned long samplerate, int mode) {
   } else if ((mode & EBUR128_MODE_M) == EBUR128_MODE_M) {
     st->d->window = 400;
   } else {
-    goto free_prev_true_peak;
+    goto free_true_peak;
   }
   st->d->audio_data_frames = st->samplerate * st->d->window / 1000;
   if (st->d->audio_data_frames % st->d->samples_in_100ms) {
@@ -259,19 +186,16 @@ ebur128_init(unsigned int channels, unsigned long samplerate, int mode) {
   }
   st->d->audio_data = (double*) malloc(st->d->audio_data_frames * st->channels *
                                        sizeof(double));
-  CHECK_ERROR(!st->d->audio_data, 0, free_prev_true_peak)
+  CHECK_ERROR(!st->d->audio_data, 0, free_true_peak)
   for (j = 0; j < st->d->audio_data_frames * st->channels; ++j) {
     st->d->audio_data[j] = 0.0;
   }
-
-  errcode = ebur128_init_filter(st);
-  CHECK_ERROR(errcode, 0, free_audio_data)
 
   st->d->block_energy_history = history_create(mode & EBUR128_MODE_HISTOGRAM ? 1 : 0, st->d->history / 100);
   st->d->short_term_block_energy_history = history_create(mode & EBUR128_MODE_HISTOGRAM ? 1 : 0, st->d->history / 3000);
   st->d->short_term_frame_counter = 0;
 
-  st->d->tp = true_peak_create(st->samplerate, st->channels);
+  st->d->f = filter_create(st->samplerate, st->channels, (st->mode & EBUR128_MODE_SAMPLE_PEAK) == EBUR128_MODE_SAMPLE_PEAK, (st->mode & EBUR128_MODE_TRUE_PEAK) == EBUR128_MODE_TRUE_PEAK);
 
   /* the first block needs 400ms of audio data */
   st->d->needed_frames = st->d->samples_in_100ms * 4;
@@ -280,14 +204,8 @@ ebur128_init(unsigned int channels, unsigned long samplerate, int mode) {
 
   return st;
 
-free_audio_data:
-  free(st->d->audio_data);
-free_prev_true_peak:
-  free(st->d->prev_true_peak);
 free_true_peak:
   free(st->d->true_peak);
-free_prev_sample_peak:
-  free(st->d->prev_sample_peak);
 free_sample_peak:
   free(st->d->sample_peak);
 free_channel_map:
@@ -303,98 +221,15 @@ exit:
 void ebur128_destroy(ebur128_state** st) {
   history_destroy((*st)->d->short_term_block_energy_history);
   history_destroy((*st)->d->block_energy_history);
-  free((*st)->d->v);
+  filter_destroy((*st)->d->f);
   free((*st)->d->audio_data);
   free((*st)->d->channel_map);
   free((*st)->d->sample_peak);
-  free((*st)->d->prev_sample_peak);
   free((*st)->d->true_peak);
-  free((*st)->d->prev_true_peak);
-  true_peak_destroy((*st)->d->tp);
   free((*st)->d);
   free(*st);
   *st = NULL;
 }
-
-#if defined(__SSE2_MATH__) || defined(_M_X64) || _M_IX86_FP >= 2
-#include <xmmintrin.h>
-#define TURN_ON_FTZ                                                            \
-  unsigned int mxcsr = _mm_getcsr();                                           \
-  _mm_setcsr(mxcsr | _MM_FLUSH_ZERO_ON);
-#define TURN_OFF_FTZ _mm_setcsr(mxcsr);
-#define FLUSH_MANUALLY
-#else
-#warning "manual FTZ is being used, please enable SSE2 (-msse2 -mfpmath=sse)"
-#define TURN_ON_FTZ
-#define TURN_OFF_FTZ
-#define FLUSH_MANUALLY                                                         \
-  st->d->v[c][4] = fabs(st->d->v[c][4]) < DBL_MIN ? 0.0 : st->d->v[c][4];      \
-  st->d->v[c][3] = fabs(st->d->v[c][3]) < DBL_MIN ? 0.0 : st->d->v[c][3];      \
-  st->d->v[c][2] = fabs(st->d->v[c][2]) < DBL_MIN ? 0.0 : st->d->v[c][2];      \
-  st->d->v[c][1] = fabs(st->d->v[c][1]) < DBL_MIN ? 0.0 : st->d->v[c][1];
-#endif
-
-#define EBUR128_FILTER(type, min_scale, max_scale)                             \
-  static void ebur128_filter_##type(ebur128_state* st, const type* src,        \
-                                    size_t frames) {                           \
-    static double scaling_factor =                                             \
-        EBUR128_MAX(-((double) (min_scale)), (double) (max_scale));            \
-                                                                               \
-    double* audio_data = st->d->audio_data + st->d->audio_data_index;          \
-    size_t i, c;                                                               \
-                                                                               \
-    TURN_ON_FTZ                                                                \
-                                                                               \
-    if ((st->mode & EBUR128_MODE_SAMPLE_PEAK) == EBUR128_MODE_SAMPLE_PEAK) {   \
-      for (c = 0; c < st->channels; ++c) {                                     \
-        double max = 0.0;                                                      \
-        for (i = 0; i < frames; ++i) {                                         \
-          double cur = (double) src[i * st->channels + c];                     \
-          if (EBUR128_MAX(cur, -cur) > max) {                                  \
-            max = EBUR128_MAX(cur, -cur);                                      \
-          }                                                                    \
-        }                                                                      \
-        max /= scaling_factor;                                                 \
-        if (max > st->d->prev_sample_peak[c]) {                                \
-          st->d->prev_sample_peak[c] = max;                                    \
-        }                                                                      \
-      }                                                                        \
-    }                                                                          \
-    if ((st->mode & EBUR128_MODE_TRUE_PEAK) == EBUR128_MODE_TRUE_PEAK &&       \
-        st->d->tp) {                                                           \
-      true_peak_check_##type(st->d->tp, frames, src, st->d->prev_true_peak);   \
-    }                                                                          \
-    for (c = 0; c < st->channels; ++c) {                                       \
-      if (st->d->channel_map[c] == EBUR128_UNUSED) {                           \
-        continue;                                                              \
-      }                                                                        \
-      for (i = 0; i < frames; ++i) {                                           \
-        st->d->v[c][0] =                                                       \
-            (double) ((double) src[i * st->channels + c] / scaling_factor) -   \
-            st->d->a[1] * st->d->v[c][1] - /**/                                \
-            st->d->a[2] * st->d->v[c][2] - /**/                                \
-            st->d->a[3] * st->d->v[c][3] - /**/                                \
-            st->d->a[4] * st->d->v[c][4];                                      \
-        audio_data[i * st->channels + c] = /**/                                \
-            st->d->b[0] * st->d->v[c][0] + /**/                                \
-            st->d->b[1] * st->d->v[c][1] + /**/                                \
-            st->d->b[2] * st->d->v[c][2] + /**/                                \
-            st->d->b[3] * st->d->v[c][3] + /**/                                \
-            st->d->b[4] * st->d->v[c][4];                                      \
-        st->d->v[c][4] = st->d->v[c][3];                                       \
-        st->d->v[c][3] = st->d->v[c][2];                                       \
-        st->d->v[c][2] = st->d->v[c][1];                                       \
-        st->d->v[c][1] = st->d->v[c][0];                                       \
-      }                                                                        \
-      FLUSH_MANUALLY                                                           \
-    }                                                                          \
-    TURN_OFF_FTZ                                                               \
-  }
-
-EBUR128_FILTER(short, SHRT_MIN, SHRT_MAX)
-EBUR128_FILTER(int, INT_MIN, INT_MAX)
-EBUR128_FILTER(float, -1.0f, 1.0f)
-EBUR128_FILTER(double, -1.0, 1.0)
 
 static double ebur128_energy_to_loudness(double energy) {
   return 10 * (log(energy) / log(10.0)) - 0.691;
@@ -501,12 +336,8 @@ int ebur128_change_parameters(ebur128_state* st,
     st->d->channel_map = NULL;
     free(st->d->sample_peak);
     st->d->sample_peak = NULL;
-    free(st->d->prev_sample_peak);
-    st->d->prev_sample_peak = NULL;
     free(st->d->true_peak);
     st->d->true_peak = NULL;
-    free(st->d->prev_true_peak);
-    st->d->prev_true_peak = NULL;
     st->channels = channels;
 
     errcode = ebur128_init_channel_map(st);
@@ -514,17 +345,11 @@ int ebur128_change_parameters(ebur128_state* st,
 
     st->d->sample_peak = (double*) malloc(channels * sizeof(double));
     CHECK_ERROR(!st->d->sample_peak, EBUR128_ERROR_NOMEM, exit)
-    st->d->prev_sample_peak = (double*) malloc(channels * sizeof(double));
-    CHECK_ERROR(!st->d->prev_sample_peak, EBUR128_ERROR_NOMEM, exit)
     st->d->true_peak = (double*) malloc(channels * sizeof(double));
     CHECK_ERROR(!st->d->true_peak, EBUR128_ERROR_NOMEM, exit)
-    st->d->prev_true_peak = (double*) malloc(channels * sizeof(double));
-    CHECK_ERROR(!st->d->prev_true_peak, EBUR128_ERROR_NOMEM, exit)
     for (i = 0; i < channels; ++i) {
       st->d->sample_peak[i] = 0.0;
-      st->d->prev_sample_peak[i] = 0.0;
       st->d->true_peak[i] = 0.0;
-      st->d->prev_true_peak[i] = 0.0;
     }
   }
   if (samplerate != st->samplerate) {
@@ -534,10 +359,8 @@ int ebur128_change_parameters(ebur128_state* st,
 
   /* If we're here, either samplerate or channels
    * have changed. Re-init filter. */
-  free(st->d->v);
-  st->d->v = NULL;
-  errcode = ebur128_init_filter(st);
-  CHECK_ERROR(errcode, EBUR128_ERROR_NOMEM, exit)
+  filter_destroy(st->d->f);
+  st->d->f = filter_create(st->samplerate, st->channels, (st->mode & EBUR128_MODE_SAMPLE_PEAK) == EBUR128_MODE_SAMPLE_PEAK, (st->mode & EBUR128_MODE_TRUE_PEAK) == EBUR128_MODE_TRUE_PEAK);
 
   st->d->audio_data_frames = st->samplerate * st->d->window / 1000;
   if (st->d->audio_data_frames % st->d->samples_in_100ms) {
@@ -552,9 +375,6 @@ int ebur128_change_parameters(ebur128_state* st,
   for (j = 0; j < st->d->audio_data_frames * st->channels; ++j) {
     st->d->audio_data[j] = 0.0;
   }
-
-  true_peak_destroy(st->d->tp);
-  st->d->tp = true_peak_create(st->samplerate, st->channels);
 
   /* the first block needs 400ms of audio data */
   st->d->needed_frames = st->d->samples_in_100ms * 4;
@@ -636,13 +456,10 @@ static int ebur128_energy_shortterm(ebur128_state* st, double* out);
                                 size_t frames) {                               \
     size_t src_index = 0;                                                      \
     unsigned int c = 0;                                                        \
-    for (c = 0; c < st->channels; c++) {                                       \
-      st->d->prev_sample_peak[c] = 0.0;                                        \
-      st->d->prev_true_peak[c] = 0.0;                                          \
-    }                                                                          \
+    filter_reset_peaks(st->d->f);                                              \
     while (frames > 0) {                                                       \
       if (frames >= st->d->needed_frames) {                                    \
-        ebur128_filter_##type(st, src + src_index, st->d->needed_frames);      \
+        filter_process_##type(st->d->f, st->d->needed_frames, src + src_index, st->d->audio_data + st->d->audio_data_index, st->d->channel_map);      \
         src_index += st->d->needed_frames * st->channels;                      \
         frames -= st->d->needed_frames;                                        \
         st->d->audio_data_index += st->d->needed_frames * st->channels;        \
@@ -673,7 +490,7 @@ static int ebur128_energy_shortterm(ebur128_state* st, double* out);
           st->d->audio_data_index = 0;                                         \
         }                                                                      \
       } else {                                                                 \
-        ebur128_filter_##type(st, src + src_index, frames);                    \
+        filter_process_##type(st->d->f, frames, src + src_index, st->d->audio_data + st->d->audio_data_index, st->d->channel_map);      \
         st->d->audio_data_index += frames * st->channels;                      \
         if ((st->mode & EBUR128_MODE_LRA) == EBUR128_MODE_LRA) {               \
           st->d->short_term_frame_counter += frames;                           \
@@ -683,11 +500,13 @@ static int ebur128_energy_shortterm(ebur128_state* st, double* out);
       }                                                                        \
     }                                                                          \
     for (c = 0; c < st->channels; c++) {                                       \
-      if (st->d->prev_sample_peak[c] > st->d->sample_peak[c]) {                \
-        st->d->sample_peak[c] = st->d->prev_sample_peak[c];                    \
+      const double *prev_sample_peak = filter_sample_peak(st->d->f);           \
+      const double *prev_true_peak = filter_true_peak(st->d->f);               \
+      if (prev_sample_peak[c] > st->d->sample_peak[c]) {                       \
+        st->d->sample_peak[c] = prev_sample_peak[c];                           \
       }                                                                        \
-      if (st->d->prev_true_peak[c] > st->d->true_peak[c]) {                    \
-        st->d->true_peak[c] = st->d->prev_true_peak[c];                        \
+      if (prev_true_peak[c] > st->d->true_peak[c]) {                          \
+        st->d->true_peak[c] = prev_true_peak[c];                               \
       }                                                                        \
     }                                                                          \
     return EBUR128_SUCCESS;                                                    \
@@ -831,7 +650,7 @@ int ebur128_prev_sample_peak(ebur128_state* st,
     return EBUR128_ERROR_INVALID_CHANNEL_INDEX;
   }
 
-  *out = st->d->prev_sample_peak[channel_number];
+  *out = filter_sample_peak(st->d->f)[channel_number];
   return EBUR128_SUCCESS;
 }
 
@@ -862,7 +681,7 @@ int ebur128_prev_true_peak(ebur128_state* st,
     return EBUR128_ERROR_INVALID_CHANNEL_INDEX;
   }
 
-  *out = EBUR128_MAX(st->d->prev_true_peak[channel_number],
-                     st->d->prev_sample_peak[channel_number]);
+  *out = EBUR128_MAX(filter_true_peak(st->d->f)[channel_number],
+                     filter_sample_peak(st->d->f)[channel_number]);
   return EBUR128_SUCCESS;
 }

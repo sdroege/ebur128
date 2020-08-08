@@ -42,6 +42,10 @@ name = "history"
 harness = false
 
 [[bench]]
+name = "filter"
+harness = false
+
+[[bench]]
 name = "ebur128"
 harness = false
 

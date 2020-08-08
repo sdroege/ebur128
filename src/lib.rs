@@ -34,6 +34,11 @@ pub mod history;
 #[cfg(not(feature = "internal-tests"))]
 pub(crate) mod history;
 
+#[cfg(feature = "internal-tests")]
+pub mod filter;
+#[cfg(not(feature = "internal-tests"))]
+pub(crate) mod filter;
+
 #[cfg(test)]
 mod tests {
     #[derive(Clone, Debug)]

@@ -76,7 +76,7 @@ mod tests {
         }
     }
 
-    impl<T: FromF32> quickcheck::Arbitrary for Signal<T> {
+    impl<T: FromF32 + quickcheck::Arbitrary> quickcheck::Arbitrary for Signal<T> {
         fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
             use rand::Rng;
 
@@ -128,6 +128,80 @@ mod tests {
                 data,
                 channels,
                 rate,
+            }
+        }
+
+        fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
+            SignalShrinker::new(self.clone())
+        }
+    }
+
+    struct SignalShrinker<A: FromF32> {
+        seed: Signal<A>,
+        /// How many elements to take
+        size: usize,
+        /// Whether we tried with one channel already
+        tried_one_channel: bool,
+    }
+
+    impl<A: FromF32 + quickcheck::Arbitrary> SignalShrinker<A> {
+        fn new(seed: Signal<A>) -> Box<dyn Iterator<Item = Signal<A>>> {
+            let channels = seed.channels;
+            Box::new(SignalShrinker {
+                seed,
+                size: 0,
+                tried_one_channel: channels == 1,
+            })
+        }
+    }
+
+    impl<A> Iterator for SignalShrinker<A>
+    where
+        A: FromF32 + quickcheck::Arbitrary,
+    {
+        type Item = Signal<A>;
+        fn next(&mut self) -> Option<Signal<A>> {
+            if self.size < self.seed.data.len() {
+                // Generate a smaller vector by removing size elements
+                let xs1 = if self.tried_one_channel {
+                    Vec::from(&self.seed.data[..self.size])
+                } else {
+                    self.seed
+                        .data
+                        .iter()
+                        .cloned()
+                        .step_by(self.seed.channels as usize)
+                        .take(self.size)
+                        .collect()
+                };
+
+                if self.size == 0 {
+                    self.size = if self.tried_one_channel {
+                        self.seed.channels as usize
+                    } else {
+                        1
+                    };
+                } else {
+                    self.size *= 2;
+                }
+
+                Some(Signal {
+                    data: xs1,
+                    channels: if self.tried_one_channel {
+                        self.seed.channels
+                    } else {
+                        1
+                    },
+                    rate: self.seed.rate,
+                })
+            } else {
+                if !self.tried_one_channel {
+                    self.tried_one_channel = true;
+                    self.size = 0;
+                    self.next()
+                } else {
+                    None
+                }
             }
         }
     }

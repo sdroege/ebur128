@@ -1,3 +1,24 @@
+// Copyright (c) 2011 Jan Kokemüller
+// Copyright (c) 2020 Sebastian Dröge <sebastian@centricular.com>
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+
 //!  Implementation of the [EBU R128 loudness standard](https://tech.ebu.ch/docs/r/r128.pdf).
 //!
 //!  The European Broadcasting Union Loudness Recommendation (EBU R128) informs broadcasters how
@@ -12,9 +33,6 @@
 //!   * Implements loudness range measurement (EBU - TECH 3342)
 //!   * True peak scanning
 //!   * Supports all samplerates by recalculation of the filter coefficients
-
-#[allow(unused, non_camel_case_types, non_upper_case_globals)]
-mod ffi;
 
 mod ebur128;
 pub use self::ebur128::*;
@@ -38,6 +56,20 @@ pub(crate) mod history;
 pub mod filter;
 #[cfg(not(feature = "internal-tests"))]
 pub(crate) mod filter;
+
+pub(crate) fn energy_to_loudness(energy: f64) -> f64 {
+    // The non-test version is faster and more accurate but gives
+    // slightly different results than the C version and fails the
+    // tests because of that.
+    #[cfg(test)]
+    {
+        10.0 * (f64::ln(energy) / f64::ln(10.0)) - 0.691
+    }
+    #[cfg(not(test))]
+    {
+        10.0 * f64::log10(energy) - 0.691
+    }
+}
 
 #[cfg(test)]
 mod tests {

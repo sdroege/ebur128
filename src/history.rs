@@ -1,4 +1,28 @@
+// Copyright (c) 2011 Jan Kokemüller
+// Copyright (c) 2020 Sebastian Dröge <sebastian@centricular.com>
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+
+use crate::energy_to_loudness;
+
 use std::collections::VecDeque;
+use std::fmt;
 
 // FIXME: Make const once powf() is a const function
 lazy_static::lazy_static! {
@@ -198,6 +222,15 @@ pub enum History {
     Histogram(Histogram),
 }
 
+impl fmt::Debug for History {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            History::Histogram(..) => f.debug_struct("History::Histogram").finish(),
+            History::Queue(..) => f.debug_struct("History::Queue").finish(),
+        }
+    }
+}
+
 impl History {
     pub fn new(use_histogram: bool, max: usize) -> Self {
         if use_histogram {
@@ -312,60 +345,6 @@ impl History {
             History::Queue(ref q) => q.loudness_range(),
         }
     }
-}
-
-fn energy_to_loudness(energy: f64) -> f64 {
-    // The non-test version is faster and more accurate but gives
-    // slightly different results than the C version and fails the
-    // tests...
-    #[cfg(feature = "internal-tests")]
-    {
-        10.0 * (f64::ln(energy) / f64::ln(10.0)) - 0.691
-    }
-    #[cfg(not(feature = "internal-tests"))]
-    {
-        10.0 * f64::ln(energy) - 0.691
-    }
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn history_create(use_histogram: i32, max: usize) -> *mut History {
-    Box::into_raw(Box::new(History::new(use_histogram != 0, max)))
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn history_add(history: *mut History, energy: f64) {
-    let history = &mut *history;
-    history.add(energy);
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn history_set_max_size(history: *mut History, max: usize) {
-    let history = &mut *history;
-    history.set_max_size(max);
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn history_gated_loudness(history: *const History) -> f64 {
-    let history = &*history;
-    history.gated_loudness()
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn history_relative_threshold(history: *const History) -> f64 {
-    let history = &*history;
-    history.relative_threshold()
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn history_loudness_range(history: *const History) -> f64 {
-    let history = &*history;
-    history.loudness_range()
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn history_destroy(history: *mut History) {
-    drop(Box::from_raw(history));
 }
 
 #[cfg(feature = "internal-tests")]

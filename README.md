@@ -15,8 +15,7 @@ Features:
  * True peak scanning
  * Supports all samplerates by recalculation of the filter coefficients
 
-This crate is based on the [libebur128](https://github.com/jiixyj/libebur128) C
-library.
+This crate is a Rust port of the [libebur128](https://github.com/jiixyj/libebur128) C library.
 
 ## LICENSE
 

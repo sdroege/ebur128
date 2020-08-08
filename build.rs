@@ -1,15 +1,15 @@
 fn main() {
-    let mut b = cc::Build::new();
+    #[cfg(feature = "internal-tests")]
+    {
+        let mut b = cc::Build::new();
 
-    if cfg!(feature = "internal-tests") {
         b.define("TESTS", "1");
         b.compiler("clang");
-        b.file("src/c/tests/interp.c");
-        b.file("src/c/tests/true_peak.c");
-        b.file("src/c/tests/history.c");
-        b.file("src/c/tests/filter.c");
+        b.file("tests/c/interp.c");
+        b.file("tests/c/true_peak.c");
+        b.file("tests/c/history.c");
+        b.file("tests/c/filter.c");
+        b.file("tests/c/calc_gating_block.c");
+        b.compile("ebur128");
     }
-
-    b.file("src/c/ebur128.c");
-    b.compile("ebur128");
 }

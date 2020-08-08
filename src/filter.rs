@@ -1,3 +1,26 @@
+// Copyright (c) 2011 Jan Kokemüller
+// Copyright (c) 2020 Sebastian Dröge <sebastian@centricular.com>
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+
+use std::fmt;
+
 pub struct Filter {
     channels: u32,
     // BS.1770 filter coefficients (nominator).
@@ -12,6 +35,21 @@ pub struct Filter {
 
     tp: Option<crate::true_peak::TruePeak>,
     true_peak: Vec<f64>,
+}
+
+impl fmt::Debug for Filter {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Filter")
+            .field("channels", &self.channels)
+            .field("b", &self.b)
+            .field("a", &self.a)
+            .field("filter_state", &self.filter_state)
+            .field("calculate_sample_peak", &self.calculate_sample_peak)
+            .field("sample_peak", &self.sample_peak)
+            .field("calculate_true_peak", &self.tp.is_some())
+            .field("true_peak", &self.true_peak)
+            .finish()
+    }
 }
 
 #[allow(non_snake_case)]
@@ -111,8 +149,12 @@ impl Filter {
         &*self.true_peak
     }
 
-    // FIXME: Channel map should go away
-    pub fn process<T: AsF64>(&mut self, src: &[T], dest: &mut [f64], channel_map: &[u32]) {
+    pub fn process<T: AsF64>(
+        &mut self,
+        src: &[T],
+        dest: &mut [f64],
+        channel_map: &[crate::ebur128::Channel],
+    ) {
         let ftz = ftz::Ftz::new();
 
         assert!(src.len() == dest.len());
@@ -145,7 +187,7 @@ impl Filter {
         }
 
         for (c, channel_map) in channel_map.iter().enumerate() {
-            if *channel_map == crate::ffi::channel_EBUR128_UNUSED {
+            if *channel_map == crate::ebur128::Channel::Unused {
                 continue;
             }
 
@@ -257,116 +299,6 @@ mod ftz {
     }
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn filter_create(
-    rate: u32,
-    channels: u32,
-    calculate_sample_peak: i32,
-    calculate_true_peak: i32,
-) -> *mut Filter {
-    Box::into_raw(Box::new(Filter::new(
-        rate,
-        channels,
-        calculate_sample_peak != 0,
-        calculate_true_peak != 0,
-    )))
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn filter_reset_peaks(filter: *mut Filter) {
-    let filter = &mut *filter;
-    filter.reset_peaks();
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn filter_sample_peak(filter: *const Filter) -> *const f64 {
-    let filter = &*filter;
-    filter.sample_peak().as_ptr()
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn filter_true_peak(filter: *const Filter) -> *const f64 {
-    let filter = &*filter;
-    filter.true_peak().as_ptr()
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn filter_process_short(
-    filter: *mut Filter,
-    frames: usize,
-    src: *const i16,
-    dest: *mut f64,
-    channel_map: *const u32,
-) {
-    use std::slice;
-
-    let filter = &mut *filter;
-    let src = slice::from_raw_parts(src, filter.channels as usize * frames);
-    let dest = slice::from_raw_parts_mut(dest, filter.channels as usize * frames);
-    let channel_map = slice::from_raw_parts(channel_map, filter.channels as usize);
-
-    filter.process(src, dest, channel_map);
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn filter_process_int(
-    filter: *mut Filter,
-    frames: usize,
-    src: *const i32,
-    dest: *mut f64,
-    channel_map: *const u32,
-) {
-    use std::slice;
-
-    let filter = &mut *filter;
-    let src = slice::from_raw_parts(src, filter.channels as usize * frames);
-    let dest = slice::from_raw_parts_mut(dest, filter.channels as usize * frames);
-    let channel_map = slice::from_raw_parts(channel_map, filter.channels as usize);
-
-    filter.process(src, dest, channel_map);
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn filter_process_float(
-    filter: *mut Filter,
-    frames: usize,
-    src: *const f32,
-    dest: *mut f64,
-    channel_map: *const u32,
-) {
-    use std::slice;
-
-    let filter = &mut *filter;
-    let src = slice::from_raw_parts(src, filter.channels as usize * frames);
-    let dest = slice::from_raw_parts_mut(dest, filter.channels as usize * frames);
-    let channel_map = slice::from_raw_parts(channel_map, filter.channels as usize);
-
-    filter.process(src, dest, channel_map);
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn filter_process_double(
-    filter: *mut Filter,
-    frames: usize,
-    src: *const f64,
-    dest: *mut f64,
-    channel_map: *const u32,
-) {
-    use std::slice;
-
-    let filter = &mut *filter;
-    let src = slice::from_raw_parts(src, filter.channels as usize * frames);
-    let dest = slice::from_raw_parts_mut(dest, filter.channels as usize * frames);
-    let channel_map = slice::from_raw_parts(channel_map, filter.channels as usize);
-
-    filter.process(src, dest, channel_map);
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn filter_destroy(filter: *mut Filter) {
-    drop(Box::from_raw(filter));
-}
-
 #[cfg(feature = "internal-tests")]
 use std::os::raw::c_void;
 
@@ -434,7 +366,8 @@ mod tests {
         let mut data_out = vec![0.0f64; frames * signal.channels as usize];
         let mut data_out_c = vec![0.0f64; frames * signal.channels as usize];
 
-        let channel_map = vec![1; signal.channels as usize];
+        let channel_map_c = vec![1; signal.channels as usize];
+        let channel_map = vec![crate::ebur128::Channel::Unused; signal.channels as usize];
 
         let (sp, tp) = {
             let mut f = Filter::new(
@@ -466,7 +399,7 @@ mod tests {
                 frames,
                 signal.data[..(frames * signal.channels as usize)].as_ptr(),
                 data_out_c.as_mut_ptr(),
-                channel_map.as_ptr(),
+                channel_map_c.as_ptr(),
             );
 
             let sp = Vec::from(slice::from_raw_parts(
@@ -532,7 +465,8 @@ mod tests {
         let mut data_out = vec![0.0f64; frames * signal.channels as usize];
         let mut data_out_c = vec![0.0f64; frames * signal.channels as usize];
 
-        let channel_map = vec![1; signal.channels as usize];
+        let channel_map_c = vec![1; signal.channels as usize];
+        let channel_map = vec![crate::ebur128::Channel::Unused; signal.channels as usize];
 
         let (sp, tp) = {
             let mut f = Filter::new(
@@ -564,7 +498,7 @@ mod tests {
                 frames,
                 signal.data[..(frames * signal.channels as usize)].as_ptr(),
                 data_out_c.as_mut_ptr(),
-                channel_map.as_ptr(),
+                channel_map_c.as_ptr(),
             );
 
             let sp = Vec::from(slice::from_raw_parts(
@@ -630,7 +564,8 @@ mod tests {
         let mut data_out = vec![0.0f64; frames * signal.channels as usize];
         let mut data_out_c = vec![0.0f64; frames * signal.channels as usize];
 
-        let channel_map = vec![1; signal.channels as usize];
+        let channel_map_c = vec![1; signal.channels as usize];
+        let channel_map = vec![crate::ebur128::Channel::Unused; signal.channels as usize];
 
         let (sp, tp) = {
             let mut f = Filter::new(
@@ -662,7 +597,7 @@ mod tests {
                 frames,
                 signal.data[..(frames * signal.channels as usize)].as_ptr(),
                 data_out_c.as_mut_ptr(),
-                channel_map.as_ptr(),
+                channel_map_c.as_ptr(),
             );
 
             let sp = Vec::from(slice::from_raw_parts(
@@ -728,7 +663,8 @@ mod tests {
         let mut data_out = vec![0.0f64; frames * signal.channels as usize];
         let mut data_out_c = vec![0.0f64; frames * signal.channels as usize];
 
-        let channel_map = vec![1; signal.channels as usize];
+        let channel_map_c = vec![1; signal.channels as usize];
+        let channel_map = vec![crate::ebur128::Channel::Unused; signal.channels as usize];
 
         let (sp, tp) = {
             let mut f = Filter::new(
@@ -760,7 +696,7 @@ mod tests {
                 frames,
                 signal.data[..(frames * signal.channels as usize)].as_ptr(),
                 data_out_c.as_mut_ptr(),
-                channel_map.as_ptr(),
+                channel_map_c.as_ptr(),
             );
 
             let sp = Vec::from(slice::from_raw_parts(

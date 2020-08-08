@@ -21,7 +21,13 @@ fn filter_i16_c(rate: u32, channels: u32, src: &[i16], dest: &mut [f64], channel
 }
 
 #[cfg(feature = "internal-tests")]
-fn filter_i16(rate: u32, channels: u32, src: &[i16], dest: &mut [f64], channel_map: &[u32]) {
+fn filter_i16(
+    rate: u32,
+    channels: u32,
+    src: &[i16],
+    dest: &mut [f64],
+    channel_map: &[ebur128::Channel],
+) {
     use ebur128::filter;
 
     let mut f = filter::Filter::new(rate, channels, true, false);
@@ -46,7 +52,13 @@ fn filter_i32_c(rate: u32, channels: u32, src: &[i32], dest: &mut [f64], channel
 }
 
 #[cfg(feature = "internal-tests")]
-fn filter_i32(rate: u32, channels: u32, src: &[i32], dest: &mut [f64], channel_map: &[u32]) {
+fn filter_i32(
+    rate: u32,
+    channels: u32,
+    src: &[i32],
+    dest: &mut [f64],
+    channel_map: &[ebur128::Channel],
+) {
     use ebur128::filter;
 
     let mut f = filter::Filter::new(rate, channels, true, false);
@@ -71,7 +83,13 @@ fn filter_f32_c(rate: u32, channels: u32, src: &[f32], dest: &mut [f64], channel
 }
 
 #[cfg(feature = "internal-tests")]
-fn filter_f32(rate: u32, channels: u32, src: &[f32], dest: &mut [f64], channel_map: &[u32]) {
+fn filter_f32(
+    rate: u32,
+    channels: u32,
+    src: &[f32],
+    dest: &mut [f64],
+    channel_map: &[ebur128::Channel],
+) {
     use ebur128::filter;
 
     let mut f = filter::Filter::new(rate, channels, true, false);
@@ -96,7 +114,13 @@ fn filter_f64_c(rate: u32, channels: u32, src: &[f64], dest: &mut [f64], channel
 }
 
 #[cfg(feature = "internal-tests")]
-fn filter_f64(rate: u32, channels: u32, src: &[f64], dest: &mut [f64], channel_map: &[u32]) {
+fn filter_f64(
+    rate: u32,
+    channels: u32,
+    src: &[f64],
+    dest: &mut [f64],
+    channel_map: &[ebur128::Channel],
+) {
     use ebur128::filter;
 
     let mut f = filter::Filter::new(rate, channels, true, false);
@@ -106,7 +130,8 @@ fn filter_f64(rate: u32, channels: u32, src: &[f64], dest: &mut [f64], channel_m
 pub fn criterion_benchmark(c: &mut Criterion) {
     #[cfg(feature = "internal-tests")]
     {
-        let channel_map = [1; 2];
+        let channel_map_c = [1; 2];
+        let channel_map = [ebur128::Channel::Unused; 2];
         let mut data_out = vec![0.0f64; 19200 * 2];
         let mut data = vec![0i16; 19200 * 2];
         let mut accumulator = 0.0;
@@ -127,7 +152,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
                     black_box(2),
                     black_box(&data),
                     black_box(&mut data_out),
-                    black_box(&channel_map),
+                    black_box(&channel_map_c),
                 )
             })
         });
@@ -165,7 +190,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
                     black_box(2),
                     black_box(&data),
                     black_box(&mut data_out),
-                    black_box(&channel_map),
+                    black_box(&channel_map_c),
                 )
             })
         });
@@ -203,7 +228,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
                     black_box(2),
                     black_box(&data),
                     black_box(&mut data_out),
-                    black_box(&channel_map),
+                    black_box(&channel_map_c),
                 )
             })
         });
@@ -241,7 +266,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
                     black_box(2),
                     black_box(&data),
                     black_box(&mut data_out),
-                    black_box(&channel_map),
+                    black_box(&channel_map_c),
                 )
             })
         });

@@ -1,6 +1,6 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 
-#[cfg(feature = "internal-tests")]
+#[cfg(feature = "c-tests")]
 fn true_peak_i16_c(rate: u32, channels: u32, data: &[i16], peaks: &mut [f64]) {
     use ebur128::true_peak;
 
@@ -24,7 +24,7 @@ fn true_peak_i16(rate: u32, channels: u32, data: &[i16], peaks: &mut [f64]) {
     tp.check_true_peak(data, peaks);
 }
 
-#[cfg(feature = "internal-tests")]
+#[cfg(feature = "c-tests")]
 fn true_peak_i32_c(rate: u32, channels: u32, data: &[i32], peaks: &mut [f64]) {
     use ebur128::true_peak;
 
@@ -48,7 +48,7 @@ fn true_peak_i32(rate: u32, channels: u32, data: &[i32], peaks: &mut [f64]) {
     tp.check_true_peak(data, peaks);
 }
 
-#[cfg(feature = "internal-tests")]
+#[cfg(feature = "c-tests")]
 fn true_peak_f32_c(rate: u32, channels: u32, data: &[f32], peaks: &mut [f64]) {
     use ebur128::true_peak;
 
@@ -72,7 +72,7 @@ fn true_peak_f32(rate: u32, channels: u32, data: &[f32], peaks: &mut [f64]) {
     tp.check_true_peak(data, peaks);
 }
 
-#[cfg(feature = "internal-tests")]
+#[cfg(feature = "c-tests")]
 fn true_peak_f64_c(rate: u32, channels: u32, data: &[f64], peaks: &mut [f64]) {
     use ebur128::true_peak;
 
@@ -113,16 +113,19 @@ pub fn criterion_benchmark(c: &mut Criterion) {
 
         let mut group = c.benchmark_group("true_peak: 48kHz 2ch i16");
 
-        group.bench_function("C", |b| {
-            b.iter(|| {
-                true_peak_i16_c(
-                    black_box(48_000),
-                    black_box(2),
-                    black_box(&data),
-                    black_box(&mut peaks),
-                )
-            })
-        });
+        #[cfg(feature = "c-tests")]
+        {
+            group.bench_function("C", |b| {
+                b.iter(|| {
+                    true_peak_i16_c(
+                        black_box(48_000),
+                        black_box(2),
+                        black_box(&data),
+                        black_box(&mut peaks),
+                    )
+                })
+            });
+        }
 
         group.bench_function("Rust", |b| {
             b.iter(|| {
@@ -149,16 +152,19 @@ pub fn criterion_benchmark(c: &mut Criterion) {
 
         let mut group = c.benchmark_group("true_peak: 48kHz 2ch i32");
 
-        group.bench_function("C", |b| {
-            b.iter(|| {
-                true_peak_i32_c(
-                    black_box(48_000),
-                    black_box(2),
-                    black_box(&data),
-                    black_box(&mut peaks),
-                )
-            })
-        });
+        #[cfg(feature = "c-tests")]
+        {
+            group.bench_function("C", |b| {
+                b.iter(|| {
+                    true_peak_i32_c(
+                        black_box(48_000),
+                        black_box(2),
+                        black_box(&data),
+                        black_box(&mut peaks),
+                    )
+                })
+            });
+        }
 
         group.bench_function("Rust", |b| {
             b.iter(|| {
@@ -185,16 +191,19 @@ pub fn criterion_benchmark(c: &mut Criterion) {
 
         let mut group = c.benchmark_group("true_peak: 48kHz 2ch f32");
 
-        group.bench_function("C", |b| {
-            b.iter(|| {
-                true_peak_f32_c(
-                    black_box(48_000),
-                    black_box(2),
-                    black_box(&data),
-                    black_box(&mut peaks),
-                )
-            })
-        });
+        #[cfg(feature = "c-tests")]
+        {
+            group.bench_function("C", |b| {
+                b.iter(|| {
+                    true_peak_f32_c(
+                        black_box(48_000),
+                        black_box(2),
+                        black_box(&data),
+                        black_box(&mut peaks),
+                    )
+                })
+            });
+        }
 
         group.bench_function("Rust", |b| {
             b.iter(|| {
@@ -221,16 +230,19 @@ pub fn criterion_benchmark(c: &mut Criterion) {
 
         let mut group = c.benchmark_group("true_peak: 48kHz 2ch f64");
 
-        group.bench_function("C", |b| {
-            b.iter(|| {
-                true_peak_f64_c(
-                    black_box(48_000),
-                    black_box(2),
-                    black_box(&data),
-                    black_box(&mut peaks),
-                )
-            })
-        });
+        #[cfg(feature = "c-tests")]
+        {
+            group.bench_function("C", |b| {
+                b.iter(|| {
+                    true_peak_f64_c(
+                        black_box(48_000),
+                        black_box(2),
+                        black_box(&data),
+                        black_box(&mut peaks),
+                    )
+                })
+            });
+        }
 
         group.bench_function("Rust", |b| {
             b.iter(|| {

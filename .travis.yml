@@ -4,7 +4,7 @@ rust:
   - beta
   - nightly
 script:
-  - QUICKCHECK_TESTS=2 cargo test --features internal-tests
+  - QUICKCHECK_TESTS=2 cargo test --features c-tests
 matrix:
   allow_failures:
     - rust: nightly

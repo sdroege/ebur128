@@ -347,10 +347,10 @@ impl History {
     }
 }
 
-#[cfg(feature = "internal-tests")]
+#[cfg(feature = "c-tests")]
 use std::os::raw::c_void;
 
-#[cfg(feature = "internal-tests")]
+#[cfg(feature = "c-tests")]
 extern "C" {
     pub fn history_init_c();
 
@@ -369,7 +369,8 @@ extern "C" {
     pub fn history_destroy_c(history: *mut c_void);
 }
 
-#[cfg(all(test, feature = "internal-tests"))]
+#[cfg(feature = "c-tests")]
+#[cfg(test)]
 mod tests {
     use super::*;
     use float_cmp::approx_eq;

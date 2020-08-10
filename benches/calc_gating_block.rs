@@ -1,6 +1,6 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 
-#[cfg(feature = "internal-tests")]
+#[cfg(feature = "c-tests")]
 fn calc_gating_block_c(
     frames_per_block: usize,
     audio_data: &[f64],
@@ -43,21 +43,27 @@ pub fn criterion_benchmark(c: &mut Criterion) {
         }
 
         let channel_map = [ebur128::Channel::Left; 2];
-        let channel_map_c = [1; 2];
 
         let frames_per_block = 144_000;
 
         let mut group = c.benchmark_group("calc gating block: 48kHz 2ch");
-        group.bench_function("C", |b| {
-            b.iter(|| {
-                calc_gating_block_c(
-                    black_box(frames_per_block),
-                    black_box(&data),
-                    black_box(0),
-                    black_box(&channel_map_c),
-                )
-            })
-        });
+
+        #[cfg(feature = "c-tests")]
+        {
+            let channel_map_c = [1; 2];
+
+            group.bench_function("C", |b| {
+                b.iter(|| {
+                    calc_gating_block_c(
+                        black_box(frames_per_block),
+                        black_box(&data),
+                        black_box(0),
+                        black_box(&channel_map_c),
+                    )
+                })
+            });
+        }
+
         group.bench_function("Rust", |b| {
             b.iter(|| {
                 calc_gating_block(

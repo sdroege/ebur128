@@ -1,6 +1,6 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 
-#[cfg(feature = "internal-tests")]
+#[cfg(feature = "c-tests")]
 fn interp_c(taps: u32, channels: u32, data: &[f32], data_out: &mut [f32]) {
     use ebur128::interp;
 
@@ -35,16 +35,19 @@ pub fn criterion_benchmark(c: &mut Criterion) {
 
         let mut group = c.benchmark_group("interp: 49 taps 2 factors 2ch");
 
-        group.bench_function("C", |b| {
-            b.iter(|| {
-                interp_c(
-                    black_box(49),
-                    black_box(2),
-                    black_box(&data),
-                    black_box(&mut data_out),
-                )
-            })
-        });
+        #[cfg(feature = "c-tests")]
+        {
+            group.bench_function("C", |b| {
+                b.iter(|| {
+                    interp_c(
+                        black_box(49),
+                        black_box(2),
+                        black_box(&data),
+                        black_box(&mut data_out),
+                    )
+                })
+            });
+        }
         group.bench_function("Rust", |b| {
             b.iter(|| {
                 interp(

@@ -9,21 +9,24 @@ pub fn criterion_benchmark(c: &mut Criterion) {
         }
 
         let mut group = c.benchmark_group("history add: 1M Histogram");
-        group.bench_function("C", |b| {
-            b.iter(|| {
-                use ebur128::history;
+        #[cfg(feature = "c-tests")]
+        {
+            group.bench_function("C", |b| {
+                b.iter(|| {
+                    use ebur128::history;
 
-                unsafe {
-                    let hist = history::history_create_c(1, 100_000);
+                    unsafe {
+                        let hist = history::history_create_c(1, 100_000);
 
-                    for e in black_box(&energies) {
-                        history::history_add_c(hist, *e);
+                        for e in black_box(&energies) {
+                            history::history_add_c(hist, *e);
+                        }
+
+                        history::history_destroy_c(hist);
                     }
-
-                    history::history_destroy_c(hist);
-                }
-            })
-        });
+                })
+            });
+        }
         group.bench_function("Rust", |b| {
             b.iter(|| {
                 use ebur128::history;
@@ -37,21 +40,24 @@ pub fn criterion_benchmark(c: &mut Criterion) {
         group.finish();
 
         let mut group = c.benchmark_group("history add: 1M Queue");
-        group.bench_function("C", |b| {
-            b.iter(|| {
-                use ebur128::history;
+        #[cfg(feature = "c-tests")]
+        {
+            group.bench_function("C", |b| {
+                b.iter(|| {
+                    use ebur128::history;
 
-                unsafe {
-                    let hist = history::history_create_c(0, 100_000);
+                    unsafe {
+                        let hist = history::history_create_c(0, 100_000);
 
-                    for e in black_box(&energies) {
-                        history::history_add_c(hist, *e);
+                        for e in black_box(&energies) {
+                            history::history_add_c(hist, *e);
+                        }
+
+                        history::history_destroy_c(hist);
                     }
-
-                    history::history_destroy_c(hist);
-                }
-            })
-        });
+                })
+            });
+        }
         group.bench_function("Rust", |b| {
             b.iter(|| {
                 use ebur128::history;
@@ -65,6 +71,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
         group.finish();
 
         let mut group = c.benchmark_group("history gated loudness: 1M Histogram");
+        #[cfg(feature = "c-tests")]
         unsafe {
             use ebur128::history;
 
@@ -99,6 +106,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
         group.finish();
 
         let mut group = c.benchmark_group("history gated loudness: 1M Queue");
+        #[cfg(feature = "c-tests")]
         unsafe {
             use ebur128::history;
 
@@ -133,6 +141,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
         group.finish();
 
         let mut group = c.benchmark_group("history relative threshold: 1M Histogram");
+        #[cfg(feature = "c-tests")]
         unsafe {
             use ebur128::history;
 
@@ -167,6 +176,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
         group.finish();
 
         let mut group = c.benchmark_group("history relative threshold: 1M Queue");
+        #[cfg(feature = "c-tests")]
         unsafe {
             use ebur128::history;
 
@@ -201,6 +211,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
         group.finish();
 
         let mut group = c.benchmark_group("history loudness range: 1M Histogram");
+        #[cfg(feature = "c-tests")]
         unsafe {
             use ebur128::history;
 
@@ -235,6 +246,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
         group.finish();
 
         let mut group = c.benchmark_group("history loudness range: 1M Queue");
+        #[cfg(feature = "c-tests")]
         unsafe {
             use ebur128::history;
 

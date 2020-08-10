@@ -139,10 +139,10 @@ impl AsF32 for f64 {
     }
 }
 
-#[cfg(feature = "internal-tests")]
+#[cfg(feature = "c-tests")]
 use std::os::raw::c_void;
 
-#[cfg(feature = "internal-tests")]
+#[cfg(feature = "c-tests")]
 extern "C" {
     pub fn true_peak_create_c(rate: u32, channels: u32) -> *mut c_void;
     pub fn true_peak_check_short_c(
@@ -167,7 +167,8 @@ extern "C" {
     pub fn true_peak_destroy_c(tp: *mut c_void);
 }
 
-#[cfg(all(test, feature = "internal-tests"))]
+#[cfg(feature = "c-tests")]
+#[cfg(test)]
 mod tests {
     use super::*;
     use crate::tests::Signal;

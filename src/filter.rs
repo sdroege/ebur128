@@ -299,10 +299,10 @@ mod ftz {
     }
 }
 
-#[cfg(feature = "internal-tests")]
+#[cfg(feature = "c-tests")]
 use std::os::raw::c_void;
 
-#[cfg(feature = "internal-tests")]
+#[cfg(feature = "c-tests")]
 extern "C" {
     pub fn filter_create_c(
         rate: u32,
@@ -344,7 +344,8 @@ extern "C" {
     pub fn filter_destroy_c(filter: *mut c_void);
 }
 
-#[cfg(all(test, feature = "internal-tests"))]
+#[cfg(feature = "c-tests")]
+#[cfg(test)]
 mod tests {
     use super::*;
     use crate::tests::Signal;

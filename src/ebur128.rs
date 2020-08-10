@@ -840,7 +840,7 @@ impl EbuR128 {
     }
 }
 
-#[cfg(feature = "internal-tests")]
+#[cfg(feature = "c-tests")]
 extern "C" {
     pub fn calc_gating_block_c(
         frames_per_block: usize,
@@ -855,7 +855,9 @@ extern "C" {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[cfg(feature = "c-tests")]
     use crate::tests::Signal;
+    #[cfg(feature = "c-tests")]
     use quickcheck_macros::quickcheck;
 
     macro_rules! assert_eq_f64(
@@ -1141,6 +1143,7 @@ mod tests {
         assert_eq_f64!(ebu.relative_threshold().unwrap(), -10.682603991416554);
     }
 
+    #[cfg(feature = "c-tests")]
     #[quickcheck]
     fn compare_c_impl_i16(signal: Signal<i16>) {
         let mut ebu = EbuR128::new(signal.channels, signal.rate, Mode::all()).unwrap();
@@ -1191,6 +1194,7 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "c-tests")]
     #[quickcheck]
     fn compare_c_impl_i32(signal: Signal<i32>) {
         let mut ebu = EbuR128::new(signal.channels, signal.rate, Mode::all()).unwrap();
@@ -1241,6 +1245,7 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "c-tests")]
     #[quickcheck]
     fn compare_c_impl_f32(signal: Signal<f32>) {
         let mut ebu = EbuR128::new(signal.channels, signal.rate, Mode::all()).unwrap();
@@ -1291,6 +1296,7 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "c-tests")]
     #[quickcheck]
     fn compare_c_impl_f64(signal: Signal<f64>) {
         let mut ebu = EbuR128::new(signal.channels, signal.rate, Mode::all()).unwrap();
@@ -1341,6 +1347,7 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "c-tests")]
     #[quickcheck]
     fn compare_c_impl_i16_no_histogram(signal: Signal<i16>) {
         let mut ebu =
@@ -1396,6 +1403,7 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "c-tests")]
     #[quickcheck]
     fn compare_c_impl_i32_no_histogram(signal: Signal<i32>) {
         let mut ebu =
@@ -1451,6 +1459,7 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "c-tests")]
     #[quickcheck]
     fn compare_c_impl_f32_no_histogram(signal: Signal<f32>) {
         let mut ebu =
@@ -1506,6 +1515,7 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "c-tests")]
     #[quickcheck]
     fn compare_c_impl_f64_no_histogram(signal: Signal<f64>) {
         let mut ebu =
@@ -1561,6 +1571,7 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "c-tests")]
     #[derive(Clone, Debug)]
     struct GatingBlock {
         frames_per_block: usize,
@@ -1569,6 +1580,7 @@ mod tests {
         channels: u32,
     }
 
+    #[cfg(feature = "c-tests")]
     impl quickcheck::Arbitrary for GatingBlock {
         fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
             use rand::Rng;
@@ -1607,7 +1619,7 @@ mod tests {
         }
     }
 
-    #[cfg(feature = "internal-tests")]
+    #[cfg(feature = "c-tests")]
     fn default_channel_map_c(channels: u32) -> Vec<u32> {
         match channels {
             4 => vec![1, 2, 4, 5],
@@ -1623,7 +1635,7 @@ mod tests {
         }
     }
 
-    #[cfg(feature = "internal-tests")]
+    #[cfg(feature = "c-tests")]
     #[quickcheck]
     fn compare_c_impl_calc_gating_block(block: GatingBlock) {
         let channel_map = default_channel_map(block.channels);

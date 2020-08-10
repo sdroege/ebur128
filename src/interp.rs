@@ -157,10 +157,10 @@ impl Interp {
     }
 }
 
-#[cfg(feature = "internal-tests")]
+#[cfg(feature = "c-tests")]
 use std::os::raw::c_void;
 
-#[cfg(feature = "internal-tests")]
+#[cfg(feature = "c-tests")]
 extern "C" {
     pub fn interp_create_c(taps: u32, factor: u32, channels: u32) -> *mut c_void;
     pub fn interp_process_c(
@@ -172,7 +172,8 @@ extern "C" {
     pub fn interp_destroy_c(interp: *mut c_void);
 }
 
-#[cfg(all(test, feature = "internal-tests"))]
+#[cfg(feature = "c-tests")]
+#[cfg(test)]
 mod tests {
     use super::*;
     use crate::tests::Signal;

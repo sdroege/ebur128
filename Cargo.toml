@@ -27,27 +27,33 @@ quickcheck_macros = "0.9"
 rand = "0.7"
 
 [features]
-internal-tests = ["cc"]
+internal-tests = []
+c-tests = ["cc", "internal-tests"] # and ebur128-c, quickcheck, quickcheck_macros, rand but dev-dependencies can't be optional...
 
 [[bench]]
 name = "interp"
 harness = false
+required-features = ["internal-tests"]
 
 [[bench]]
 name = "true_peak"
 harness = false
+required-features = ["internal-tests"]
 
 [[bench]]
 name = "history"
 harness = false
+required-features = ["internal-tests"]
 
 [[bench]]
 name = "filter"
 harness = false
+required-features = ["internal-tests"]
 
 [[bench]]
 name = "calc_gating_block"
 harness = false
+required-features = ["internal-tests"]
 
 [[bench]]
 name = "ebur128"

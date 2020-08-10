@@ -1,5 +1,5 @@
 fn main() {
-    #[cfg(feature = "internal-tests")]
+    #[cfg(feature = "c-tests")]
     {
         let mut b = cc::Build::new();
 

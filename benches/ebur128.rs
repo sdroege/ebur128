@@ -1,5 +1,6 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 
+#[cfg(feature = "c-tests")]
 fn ebur128_i16_c(channels: u32, rate: u32, mode: ebur128_c::Mode, data: &[i16]) {
     use ebur128_c::EbuR128;
 
@@ -80,6 +81,7 @@ fn ebur128_i16(channels: u32, rate: u32, mode: ebur128::Mode, data: &[i16]) {
     }
 }
 
+#[cfg(feature = "c-tests")]
 fn ebur128_i32_c(channels: u32, rate: u32, mode: ebur128_c::Mode, data: &[i32]) {
     use ebur128_c::EbuR128;
 
@@ -160,6 +162,7 @@ fn ebur128_i32(channels: u32, rate: u32, mode: ebur128::Mode, data: &[i32]) {
     }
 }
 
+#[cfg(feature = "c-tests")]
 fn ebur128_f32_c(channels: u32, rate: u32, mode: ebur128_c::Mode, data: &[f32]) {
     use ebur128_c::EbuR128;
 
@@ -240,6 +243,7 @@ fn ebur128_f32(channels: u32, rate: u32, mode: ebur128::Mode, data: &[f32]) {
     }
 }
 
+#[cfg(feature = "c-tests")]
 fn ebur128_f64_c(channels: u32, rate: u32, mode: ebur128_c::Mode, data: &[f64]) {
     use ebur128_c::EbuR128;
 
@@ -378,8 +382,10 @@ pub fn criterion_benchmark(c: &mut Criterion) {
         ),
     ];
 
+    #[allow(unused_variables)]
     for (name, mode, mode_c) in &modes {
         let mode = *mode;
+        #[cfg(feature = "c-tests")]
         let mode_c = *mode_c;
 
         let mut data = vec![0i16; 48_000 * 5 * 2];
@@ -394,16 +400,19 @@ pub fn criterion_benchmark(c: &mut Criterion) {
 
         let mut group = c.benchmark_group(format!("ebur128: 48kHz i16 2ch {}", name));
 
-        group.bench_function("C", |b| {
-            b.iter(|| {
-                ebur128_i16_c(
-                    black_box(2),
-                    black_box(48_000),
-                    black_box(mode_c),
-                    black_box(&data),
-                )
-            })
-        });
+        #[cfg(feature = "c-tests")]
+        {
+            group.bench_function("C", |b| {
+                b.iter(|| {
+                    ebur128_i16_c(
+                        black_box(2),
+                        black_box(48_000),
+                        black_box(mode_c),
+                        black_box(&data),
+                    )
+                })
+            });
+        }
         group.bench_function("Rust", |b| {
             b.iter(|| {
                 ebur128_i16(
@@ -429,16 +438,19 @@ pub fn criterion_benchmark(c: &mut Criterion) {
 
         let mut group = c.benchmark_group(format!("ebur128: 48kHz i32 2ch {}", name));
 
-        group.bench_function("C", |b| {
-            b.iter(|| {
-                ebur128_i32_c(
-                    black_box(2),
-                    black_box(48_000),
-                    black_box(mode_c),
-                    black_box(&data),
-                )
-            })
-        });
+        #[cfg(feature = "c-tests")]
+        {
+            group.bench_function("C", |b| {
+                b.iter(|| {
+                    ebur128_i32_c(
+                        black_box(2),
+                        black_box(48_000),
+                        black_box(mode_c),
+                        black_box(&data),
+                    )
+                })
+            });
+        }
         group.bench_function("Rust", |b| {
             b.iter(|| {
                 ebur128_i32(
@@ -464,16 +476,19 @@ pub fn criterion_benchmark(c: &mut Criterion) {
 
         let mut group = c.benchmark_group(format!("ebur128: 48kHz f32 2ch {}", name));
 
-        group.bench_function("C", |b| {
-            b.iter(|| {
-                ebur128_f32_c(
-                    black_box(2),
-                    black_box(48_000),
-                    black_box(mode_c),
-                    black_box(&data),
-                )
-            })
-        });
+        #[cfg(feature = "c-tests")]
+        {
+            group.bench_function("C", |b| {
+                b.iter(|| {
+                    ebur128_f32_c(
+                        black_box(2),
+                        black_box(48_000),
+                        black_box(mode_c),
+                        black_box(&data),
+                    )
+                })
+            });
+        }
         group.bench_function("Rust", |b| {
             b.iter(|| {
                 ebur128_f32(
@@ -499,16 +514,19 @@ pub fn criterion_benchmark(c: &mut Criterion) {
 
         let mut group = c.benchmark_group(format!("ebur128: 48kHz f64 2ch {}", name));
 
-        group.bench_function("C", |b| {
-            b.iter(|| {
-                ebur128_f64_c(
-                    black_box(2),
-                    black_box(48_000),
-                    black_box(mode_c),
-                    black_box(&data),
-                )
-            })
-        });
+        #[cfg(feature = "c-tests")]
+        {
+            group.bench_function("C", |b| {
+                b.iter(|| {
+                    ebur128_f64_c(
+                        black_box(2),
+                        black_box(48_000),
+                        black_box(mode_c),
+                        black_box(&data),
+                    )
+                })
+            });
+        }
         group.bench_function("Rust", |b| {
             b.iter(|| {
                 ebur128_f64(

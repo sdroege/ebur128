@@ -367,7 +367,7 @@ mod tests {
         let mut data_out_c = vec![0.0f64; frames * signal.channels as usize];
 
         let channel_map_c = vec![1; signal.channels as usize];
-        let channel_map = vec![crate::ebur128::Channel::Unused; signal.channels as usize];
+        let channel_map = vec![crate::ebur128::Channel::Left; signal.channels as usize];
 
         let (sp, tp) = {
             let mut f = Filter::new(
@@ -391,7 +391,7 @@ mod tests {
             let f = filter_create_c(
                 signal.rate,
                 signal.channels,
-                if calculate_sample_peak { 1 } else { 1 },
+                if calculate_sample_peak { 1 } else { 0 },
                 if calculate_true_peak { 1 } else { 0 },
             );
             filter_process_short_c(
@@ -466,7 +466,7 @@ mod tests {
         let mut data_out_c = vec![0.0f64; frames * signal.channels as usize];
 
         let channel_map_c = vec![1; signal.channels as usize];
-        let channel_map = vec![crate::ebur128::Channel::Unused; signal.channels as usize];
+        let channel_map = vec![crate::ebur128::Channel::Left; signal.channels as usize];
 
         let (sp, tp) = {
             let mut f = Filter::new(
@@ -490,7 +490,7 @@ mod tests {
             let f = filter_create_c(
                 signal.rate,
                 signal.channels,
-                if calculate_sample_peak { 1 } else { 1 },
+                if calculate_sample_peak { 1 } else { 0 },
                 if calculate_true_peak { 1 } else { 0 },
             );
             filter_process_int_c(
@@ -565,7 +565,7 @@ mod tests {
         let mut data_out_c = vec![0.0f64; frames * signal.channels as usize];
 
         let channel_map_c = vec![1; signal.channels as usize];
-        let channel_map = vec![crate::ebur128::Channel::Unused; signal.channels as usize];
+        let channel_map = vec![crate::ebur128::Channel::Left; signal.channels as usize];
 
         let (sp, tp) = {
             let mut f = Filter::new(
@@ -589,7 +589,7 @@ mod tests {
             let f = filter_create_c(
                 signal.rate,
                 signal.channels,
-                if calculate_sample_peak { 1 } else { 1 },
+                if calculate_sample_peak { 1 } else { 0 },
                 if calculate_true_peak { 1 } else { 0 },
             );
             filter_process_float_c(
@@ -664,7 +664,7 @@ mod tests {
         let mut data_out_c = vec![0.0f64; frames * signal.channels as usize];
 
         let channel_map_c = vec![1; signal.channels as usize];
-        let channel_map = vec![crate::ebur128::Channel::Unused; signal.channels as usize];
+        let channel_map = vec![crate::ebur128::Channel::Left; signal.channels as usize];
 
         let (sp, tp) = {
             let mut f = Filter::new(
@@ -688,7 +688,7 @@ mod tests {
             let f = filter_create_c(
                 signal.rate,
                 signal.channels,
-                if calculate_sample_peak { 1 } else { 1 },
+                if calculate_sample_peak { 1 } else { 0 },
                 if calculate_true_peak { 1 } else { 0 },
             );
             filter_process_double_c(

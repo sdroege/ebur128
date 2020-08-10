@@ -48,6 +48,7 @@ struct Filter {
 }
 
 impl Interp {
+    #[allow(clippy::many_single_char_names)]
     pub fn new(taps: usize, factor: usize, channels: u32) -> Self {
         let delay = (taps + factor - 1) / factor;
 

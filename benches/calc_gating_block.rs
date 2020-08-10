@@ -45,7 +45,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
         let channel_map = [ebur128::Channel::Left; 2];
         let channel_map_c = [1; 2];
 
-        let frames_per_block = 1_44_000;
+        let frames_per_block = 144_000;
 
         let mut group = c.benchmark_group("calc gating block: 48kHz 2ch");
         group.bench_function("C", |b| {

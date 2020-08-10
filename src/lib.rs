@@ -164,7 +164,7 @@ mod tests {
         }
 
         fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
-            SignalShrinker::new(self.clone())
+            SignalShrinker::boxed(self.clone())
         }
     }
 
@@ -177,7 +177,7 @@ mod tests {
     }
 
     impl<A: FromF32 + quickcheck::Arbitrary> SignalShrinker<A> {
-        fn new(seed: Signal<A>) -> Box<dyn Iterator<Item = Signal<A>>> {
+        fn boxed(seed: Signal<A>) -> Box<dyn Iterator<Item = Signal<A>>> {
             let channels = seed.channels;
             Box::new(SignalShrinker {
                 seed,
@@ -226,14 +226,12 @@ mod tests {
                     },
                     rate: self.seed.rate,
                 })
+            } else if !self.tried_one_channel {
+                self.tried_one_channel = true;
+                self.size = 0;
+                self.next()
             } else {
-                if !self.tried_one_channel {
-                    self.tried_one_channel = true;
-                    self.size = 0;
-                    self.next()
-                } else {
-                    None
-                }
+                None
             }
         }
     }

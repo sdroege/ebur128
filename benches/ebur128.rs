@@ -1,385 +1,124 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 
-#[cfg(feature = "c-tests")]
-fn ebur128_i16_c(channels: u32, rate: u32, mode: ebur128_c::Mode, data: &[i16]) {
-    use ebur128_c::EbuR128;
-
-    let mut ebu = EbuR128::new(channels, rate, mode).unwrap();
-    ebu.add_frames_i16(&data).unwrap();
-
-    if mode.contains(ebur128_c::Mode::I) {
-        black_box(ebu.loudness_global().unwrap());
-    }
-    if mode.contains(ebur128_c::Mode::M) {
-        black_box(ebu.loudness_momentary().unwrap());
-    }
-    if mode.contains(ebur128_c::Mode::S) {
-        black_box(ebu.loudness_shortterm().unwrap());
-    }
-    black_box(ebu.loudness_window(1).unwrap());
-
-    if mode.contains(ebur128_c::Mode::LRA) {
-        black_box(ebu.loudness_range().unwrap());
-    }
-
-    if mode.contains(ebur128_c::Mode::SAMPLE_PEAK) {
-        black_box(ebu.sample_peak(0).unwrap());
-        black_box(ebu.sample_peak(1).unwrap());
-        black_box(ebu.prev_sample_peak(0).unwrap());
-        black_box(ebu.prev_sample_peak(1).unwrap());
-    }
-
-    if mode.contains(ebur128_c::Mode::TRUE_PEAK) {
-        black_box(ebu.true_peak(0).unwrap());
-        black_box(ebu.true_peak(1).unwrap());
-        black_box(ebu.prev_true_peak(0).unwrap());
-        black_box(ebu.prev_true_peak(1).unwrap());
-    }
-
-    if mode.contains(ebur128_c::Mode::I) {
-        black_box(ebu.relative_threshold().unwrap());
-    }
-}
-
-fn ebur128_i16(channels: u32, rate: u32, mode: ebur128::Mode, data: &[i16]) {
-    use ebur128::EbuR128;
-
-    let mut ebu = EbuR128::new(channels, rate, mode).unwrap();
-    ebu.add_frames_i16(&data).unwrap();
-
-    if mode.contains(ebur128::Mode::I) {
-        black_box(ebu.loudness_global().unwrap());
-    }
-    if mode.contains(ebur128::Mode::M) {
-        black_box(ebu.loudness_momentary().unwrap());
-    }
-    if mode.contains(ebur128::Mode::S) {
-        black_box(ebu.loudness_shortterm().unwrap());
-    }
-    black_box(ebu.loudness_window(1).unwrap());
-
-    if mode.contains(ebur128::Mode::LRA) {
-        black_box(ebu.loudness_range().unwrap());
-    }
-
-    if mode.contains(ebur128::Mode::SAMPLE_PEAK) {
-        black_box(ebu.sample_peak(0).unwrap());
-        black_box(ebu.sample_peak(1).unwrap());
-        black_box(ebu.prev_sample_peak(0).unwrap());
-        black_box(ebu.prev_sample_peak(1).unwrap());
-    }
-
-    if mode.contains(ebur128::Mode::TRUE_PEAK) {
-        black_box(ebu.true_peak(0).unwrap());
-        black_box(ebu.true_peak(1).unwrap());
-        black_box(ebu.prev_true_peak(0).unwrap());
-        black_box(ebu.prev_true_peak(1).unwrap());
-    }
-
-    if mode.contains(ebur128::Mode::I) {
-        black_box(ebu.relative_threshold().unwrap());
-    }
-}
+use ebur128::{EbuR128, Mode};
+use ebur128_c::EbuR128 as EbuR128C;
+use ebur128_c::Mode as ModeC;
 
 #[cfg(feature = "c-tests")]
-fn ebur128_i32_c(channels: u32, rate: u32, mode: ebur128_c::Mode, data: &[i32]) {
-    use ebur128_c::EbuR128;
-
-    let mut ebu = EbuR128::new(channels, rate, mode).unwrap();
-    ebu.add_frames_i32(&data).unwrap();
-
-    if mode.contains(ebur128_c::Mode::I) {
+fn get_results_c(ebu: &EbuR128C, mode: ModeC) {
+    if mode.contains(ModeC::I) {
         black_box(ebu.loudness_global().unwrap());
     }
-    if mode.contains(ebur128_c::Mode::M) {
+    if mode.contains(ModeC::M) {
         black_box(ebu.loudness_momentary().unwrap());
     }
-    if mode.contains(ebur128_c::Mode::S) {
+    if mode.contains(ModeC::S) {
         black_box(ebu.loudness_shortterm().unwrap());
     }
     black_box(ebu.loudness_window(1).unwrap());
 
-    if mode.contains(ebur128_c::Mode::LRA) {
+    if mode.contains(ModeC::LRA) {
         black_box(ebu.loudness_range().unwrap());
     }
 
-    if mode.contains(ebur128_c::Mode::SAMPLE_PEAK) {
+    if mode.contains(ModeC::SAMPLE_PEAK) {
         black_box(ebu.sample_peak(0).unwrap());
         black_box(ebu.sample_peak(1).unwrap());
         black_box(ebu.prev_sample_peak(0).unwrap());
         black_box(ebu.prev_sample_peak(1).unwrap());
     }
 
-    if mode.contains(ebur128_c::Mode::TRUE_PEAK) {
+    if mode.contains(ModeC::TRUE_PEAK) {
         black_box(ebu.true_peak(0).unwrap());
         black_box(ebu.true_peak(1).unwrap());
         black_box(ebu.prev_true_peak(0).unwrap());
         black_box(ebu.prev_true_peak(1).unwrap());
     }
 
-    if mode.contains(ebur128_c::Mode::I) {
+    if mode.contains(ModeC::I) {
         black_box(ebu.relative_threshold().unwrap());
     }
 }
 
-fn ebur128_i32(channels: u32, rate: u32, mode: ebur128::Mode, data: &[i32]) {
-    use ebur128::EbuR128;
-
-    let mut ebu = EbuR128::new(channels, rate, mode).unwrap();
-    ebu.add_frames_i32(&data).unwrap();
-
-    if mode.contains(ebur128::Mode::I) {
+fn get_results(ebu: &EbuR128, mode: Mode) {
+    if mode.contains(Mode::I) {
         black_box(ebu.loudness_global().unwrap());
     }
-    if mode.contains(ebur128::Mode::M) {
+    if mode.contains(Mode::M) {
         black_box(ebu.loudness_momentary().unwrap());
     }
-    if mode.contains(ebur128::Mode::S) {
+    if mode.contains(Mode::S) {
         black_box(ebu.loudness_shortterm().unwrap());
     }
     black_box(ebu.loudness_window(1).unwrap());
 
-    if mode.contains(ebur128::Mode::LRA) {
+    if mode.contains(Mode::LRA) {
         black_box(ebu.loudness_range().unwrap());
     }
 
-    if mode.contains(ebur128::Mode::SAMPLE_PEAK) {
+    if mode.contains(Mode::SAMPLE_PEAK) {
         black_box(ebu.sample_peak(0).unwrap());
         black_box(ebu.sample_peak(1).unwrap());
         black_box(ebu.prev_sample_peak(0).unwrap());
         black_box(ebu.prev_sample_peak(1).unwrap());
     }
 
-    if mode.contains(ebur128::Mode::TRUE_PEAK) {
+    if mode.contains(Mode::TRUE_PEAK) {
         black_box(ebu.true_peak(0).unwrap());
         black_box(ebu.true_peak(1).unwrap());
         black_box(ebu.prev_true_peak(0).unwrap());
         black_box(ebu.prev_true_peak(1).unwrap());
     }
 
-    if mode.contains(ebur128::Mode::I) {
-        black_box(ebu.relative_threshold().unwrap());
-    }
-}
-
-#[cfg(feature = "c-tests")]
-fn ebur128_f32_c(channels: u32, rate: u32, mode: ebur128_c::Mode, data: &[f32]) {
-    use ebur128_c::EbuR128;
-
-    let mut ebu = EbuR128::new(channels, rate, mode).unwrap();
-    ebu.add_frames_f32(&data).unwrap();
-
-    if mode.contains(ebur128_c::Mode::I) {
-        black_box(ebu.loudness_global().unwrap());
-    }
-    if mode.contains(ebur128_c::Mode::M) {
-        black_box(ebu.loudness_momentary().unwrap());
-    }
-    if mode.contains(ebur128_c::Mode::S) {
-        black_box(ebu.loudness_shortterm().unwrap());
-    }
-    black_box(ebu.loudness_window(1).unwrap());
-
-    if mode.contains(ebur128_c::Mode::LRA) {
-        black_box(ebu.loudness_range().unwrap());
-    }
-
-    if mode.contains(ebur128_c::Mode::SAMPLE_PEAK) {
-        black_box(ebu.sample_peak(0).unwrap());
-        black_box(ebu.sample_peak(1).unwrap());
-        black_box(ebu.prev_sample_peak(0).unwrap());
-        black_box(ebu.prev_sample_peak(1).unwrap());
-    }
-
-    if mode.contains(ebur128_c::Mode::TRUE_PEAK) {
-        black_box(ebu.true_peak(0).unwrap());
-        black_box(ebu.true_peak(1).unwrap());
-        black_box(ebu.prev_true_peak(0).unwrap());
-        black_box(ebu.prev_true_peak(1).unwrap());
-    }
-
-    if mode.contains(ebur128_c::Mode::I) {
-        black_box(ebu.relative_threshold().unwrap());
-    }
-}
-
-fn ebur128_f32(channels: u32, rate: u32, mode: ebur128::Mode, data: &[f32]) {
-    use ebur128::EbuR128;
-
-    let mut ebu = EbuR128::new(channels, rate, mode).unwrap();
-    ebu.add_frames_f32(&data).unwrap();
-
-    if mode.contains(ebur128::Mode::I) {
-        black_box(ebu.loudness_global().unwrap());
-    }
-    if mode.contains(ebur128::Mode::M) {
-        black_box(ebu.loudness_momentary().unwrap());
-    }
-    if mode.contains(ebur128::Mode::S) {
-        black_box(ebu.loudness_shortterm().unwrap());
-    }
-    black_box(ebu.loudness_window(1).unwrap());
-
-    if mode.contains(ebur128::Mode::LRA) {
-        black_box(ebu.loudness_range().unwrap());
-    }
-
-    if mode.contains(ebur128::Mode::SAMPLE_PEAK) {
-        black_box(ebu.sample_peak(0).unwrap());
-        black_box(ebu.sample_peak(1).unwrap());
-        black_box(ebu.prev_sample_peak(0).unwrap());
-        black_box(ebu.prev_sample_peak(1).unwrap());
-    }
-
-    if mode.contains(ebur128::Mode::TRUE_PEAK) {
-        black_box(ebu.true_peak(0).unwrap());
-        black_box(ebu.true_peak(1).unwrap());
-        black_box(ebu.prev_true_peak(0).unwrap());
-        black_box(ebu.prev_true_peak(1).unwrap());
-    }
-
-    if mode.contains(ebur128::Mode::I) {
-        black_box(ebu.relative_threshold().unwrap());
-    }
-}
-
-#[cfg(feature = "c-tests")]
-fn ebur128_f64_c(channels: u32, rate: u32, mode: ebur128_c::Mode, data: &[f64]) {
-    use ebur128_c::EbuR128;
-
-    let mut ebu = EbuR128::new(channels, rate, mode).unwrap();
-    ebu.add_frames_f64(&data).unwrap();
-
-    if mode.contains(ebur128_c::Mode::I) {
-        black_box(ebu.loudness_global().unwrap());
-    }
-    if mode.contains(ebur128_c::Mode::M) {
-        black_box(ebu.loudness_momentary().unwrap());
-    }
-    if mode.contains(ebur128_c::Mode::S) {
-        black_box(ebu.loudness_shortterm().unwrap());
-    }
-    black_box(ebu.loudness_window(1).unwrap());
-
-    if mode.contains(ebur128_c::Mode::LRA) {
-        black_box(ebu.loudness_range().unwrap());
-    }
-
-    if mode.contains(ebur128_c::Mode::SAMPLE_PEAK) {
-        black_box(ebu.sample_peak(0).unwrap());
-        black_box(ebu.sample_peak(1).unwrap());
-        black_box(ebu.prev_sample_peak(0).unwrap());
-        black_box(ebu.prev_sample_peak(1).unwrap());
-    }
-
-    if mode.contains(ebur128_c::Mode::TRUE_PEAK) {
-        black_box(ebu.true_peak(0).unwrap());
-        black_box(ebu.true_peak(1).unwrap());
-        black_box(ebu.prev_true_peak(0).unwrap());
-        black_box(ebu.prev_true_peak(1).unwrap());
-    }
-
-    if mode.contains(ebur128_c::Mode::I) {
-        black_box(ebu.relative_threshold().unwrap());
-    }
-}
-
-fn ebur128_f64(channels: u32, rate: u32, mode: ebur128::Mode, data: &[f64]) {
-    use ebur128::EbuR128;
-
-    let mut ebu = EbuR128::new(channels, rate, mode).unwrap();
-    ebu.add_frames_f64(&data).unwrap();
-
-    if mode.contains(ebur128::Mode::I) {
-        black_box(ebu.loudness_global().unwrap());
-    }
-    if mode.contains(ebur128::Mode::M) {
-        black_box(ebu.loudness_momentary().unwrap());
-    }
-    if mode.contains(ebur128::Mode::S) {
-        black_box(ebu.loudness_shortterm().unwrap());
-    }
-    black_box(ebu.loudness_window(1).unwrap());
-
-    if mode.contains(ebur128::Mode::LRA) {
-        black_box(ebu.loudness_range().unwrap());
-    }
-
-    if mode.contains(ebur128::Mode::SAMPLE_PEAK) {
-        black_box(ebu.sample_peak(0).unwrap());
-        black_box(ebu.sample_peak(1).unwrap());
-        black_box(ebu.prev_sample_peak(0).unwrap());
-        black_box(ebu.prev_sample_peak(1).unwrap());
-    }
-
-    if mode.contains(ebur128::Mode::TRUE_PEAK) {
-        black_box(ebu.true_peak(0).unwrap());
-        black_box(ebu.true_peak(1).unwrap());
-        black_box(ebu.prev_true_peak(0).unwrap());
-        black_box(ebu.prev_true_peak(1).unwrap());
-    }
-
-    if mode.contains(ebur128::Mode::I) {
+    if mode.contains(Mode::I) {
         black_box(ebu.relative_threshold().unwrap());
     }
 }
 
 pub fn criterion_benchmark(c: &mut Criterion) {
     let modes = [
-        ("M", ebur128::Mode::M, ebur128_c::Mode::M),
-        ("S", ebur128::Mode::S, ebur128_c::Mode::S),
-        ("I", ebur128::Mode::I, ebur128_c::Mode::I),
-        ("LRA", ebur128::Mode::LRA, ebur128_c::Mode::LRA),
-        (
-            "SAMPLE_PEAK",
-            ebur128::Mode::SAMPLE_PEAK,
-            ebur128_c::Mode::SAMPLE_PEAK,
-        ),
-        (
-            "TRUE_PEAK",
-            ebur128::Mode::TRUE_PEAK,
-            ebur128_c::Mode::TRUE_PEAK,
-        ),
+        ("M", Mode::M, ModeC::M),
+        ("S", Mode::S, ModeC::S),
+        ("I", Mode::I, ModeC::I),
+        ("LRA", Mode::LRA, ModeC::LRA),
+        ("SAMPLE_PEAK", Mode::SAMPLE_PEAK, ModeC::SAMPLE_PEAK),
+        ("TRUE_PEAK", Mode::TRUE_PEAK, ModeC::TRUE_PEAK),
         (
             "M histogram",
-            ebur128::Mode::M | ebur128::Mode::HISTOGRAM,
-            ebur128_c::Mode::M | ebur128_c::Mode::HISTOGRAM,
+            Mode::M | Mode::HISTOGRAM,
+            ModeC::M | ModeC::HISTOGRAM,
         ),
         (
             "S histogram",
-            ebur128::Mode::S | ebur128::Mode::HISTOGRAM,
-            ebur128_c::Mode::S | ebur128_c::Mode::HISTOGRAM,
+            Mode::S | Mode::HISTOGRAM,
+            ModeC::S | ModeC::HISTOGRAM,
         ),
         (
             "I histogram",
-            ebur128::Mode::I | ebur128::Mode::HISTOGRAM,
-            ebur128_c::Mode::I | ebur128_c::Mode::HISTOGRAM,
+            Mode::I | Mode::HISTOGRAM,
+            ModeC::I | ModeC::HISTOGRAM,
         ),
         (
             "LRA histogram",
-            ebur128::Mode::LRA | ebur128::Mode::HISTOGRAM,
-            ebur128_c::Mode::LRA | ebur128_c::Mode::HISTOGRAM,
+            Mode::LRA | Mode::HISTOGRAM,
+            ModeC::LRA | ModeC::HISTOGRAM,
         ),
         (
             "SAMPLE_PEAK histogram",
-            ebur128::Mode::SAMPLE_PEAK | ebur128::Mode::HISTOGRAM,
-            ebur128_c::Mode::SAMPLE_PEAK | ebur128_c::Mode::HISTOGRAM,
+            Mode::SAMPLE_PEAK | Mode::HISTOGRAM,
+            ModeC::SAMPLE_PEAK | ModeC::HISTOGRAM,
         ),
         (
             "TRUE_PEAK histogram",
-            ebur128::Mode::TRUE_PEAK | ebur128::Mode::HISTOGRAM,
-            ebur128_c::Mode::TRUE_PEAK | ebur128_c::Mode::HISTOGRAM,
+            Mode::TRUE_PEAK | Mode::HISTOGRAM,
+            ModeC::TRUE_PEAK | ModeC::HISTOGRAM,
         ),
         (
             "all",
-            ebur128::Mode::all() & !ebur128::Mode::HISTOGRAM,
-            ebur128_c::Mode::all() & !ebur128_c::Mode::HISTOGRAM,
+            Mode::all() & !Mode::HISTOGRAM,
+            ModeC::all() & !ModeC::HISTOGRAM,
         ),
-        (
-            "all histogram",
-            ebur128::Mode::all(),
-            ebur128_c::Mode::all(),
-        ),
+        ("all histogram", Mode::all(), ModeC::all()),
     ];
 
     #[allow(unused_variables)]
@@ -398,29 +137,48 @@ pub fn criterion_benchmark(c: &mut Criterion) {
             accumulator += step;
         }
 
-        let mut group = c.benchmark_group(format!("ebur128: 48kHz i16 2ch {}", name));
+        let mut group = c.benchmark_group(format!("ebur128 create: 48kHz 2ch {}", name));
 
         #[cfg(feature = "c-tests")]
         {
             group.bench_function("C", |b| {
                 b.iter(|| {
-                    ebur128_i16_c(
-                        black_box(2),
-                        black_box(48_000),
-                        black_box(mode_c),
-                        black_box(&data),
-                    )
+                    let ebu =
+                        EbuR128C::new(black_box(2), black_box(48_000), black_box(mode_c)).unwrap();
+                    drop(black_box(ebu));
                 })
             });
         }
         group.bench_function("Rust", |b| {
             b.iter(|| {
-                ebur128_i16(
-                    black_box(2),
-                    black_box(48_000),
-                    black_box(mode),
-                    black_box(&data),
-                )
+                let ebu = EbuR128::new(black_box(2), black_box(48_000), black_box(mode)).unwrap();
+                drop(black_box(ebu));
+            })
+        });
+
+        group.finish();
+
+        let mut group = c.benchmark_group(format!("ebur128 process: 48kHz 2ch i16 {}", name));
+
+        #[cfg(feature = "c-tests")]
+        {
+            group.bench_function("C", |b| {
+                b.iter(|| {
+                    let mut ebu =
+                        EbuR128C::new(black_box(2), black_box(48_000), black_box(mode_c)).unwrap();
+                    ebu.add_frames_i16(&data).unwrap();
+
+                    get_results_c(&ebu, black_box(mode_c));
+                })
+            });
+        }
+        group.bench_function("Rust", |b| {
+            b.iter(|| {
+                let mut ebu =
+                    EbuR128::new(black_box(2), black_box(48_000), black_box(mode)).unwrap();
+                ebu.add_frames_i16(&data).unwrap();
+
+                get_results(&ebu, black_box(mode));
             })
         });
 
@@ -436,29 +194,27 @@ pub fn criterion_benchmark(c: &mut Criterion) {
             accumulator += step;
         }
 
-        let mut group = c.benchmark_group(format!("ebur128: 48kHz i32 2ch {}", name));
+        let mut group = c.benchmark_group(format!("ebur128 process: 48kHz i32 2ch {}", name));
 
         #[cfg(feature = "c-tests")]
         {
             group.bench_function("C", |b| {
                 b.iter(|| {
-                    ebur128_i32_c(
-                        black_box(2),
-                        black_box(48_000),
-                        black_box(mode_c),
-                        black_box(&data),
-                    )
+                    let mut ebu =
+                        EbuR128C::new(black_box(2), black_box(48_000), black_box(mode_c)).unwrap();
+                    ebu.add_frames_i32(&data).unwrap();
+
+                    get_results_c(&ebu, black_box(mode_c));
                 })
             });
         }
         group.bench_function("Rust", |b| {
             b.iter(|| {
-                ebur128_i32(
-                    black_box(2),
-                    black_box(48_000),
-                    black_box(mode),
-                    black_box(&data),
-                )
+                let mut ebu =
+                    EbuR128::new(black_box(2), black_box(48_000), black_box(mode)).unwrap();
+                ebu.add_frames_i32(&data).unwrap();
+
+                get_results(&ebu, black_box(mode));
             })
         });
 
@@ -474,29 +230,27 @@ pub fn criterion_benchmark(c: &mut Criterion) {
             accumulator += step;
         }
 
-        let mut group = c.benchmark_group(format!("ebur128: 48kHz f32 2ch {}", name));
+        let mut group = c.benchmark_group(format!("ebur128 process: 48kHz f32 2ch {}", name));
 
         #[cfg(feature = "c-tests")]
         {
             group.bench_function("C", |b| {
                 b.iter(|| {
-                    ebur128_f32_c(
-                        black_box(2),
-                        black_box(48_000),
-                        black_box(mode_c),
-                        black_box(&data),
-                    )
+                    let mut ebu =
+                        EbuR128C::new(black_box(2), black_box(48_000), black_box(mode_c)).unwrap();
+                    ebu.add_frames_f32(&data).unwrap();
+
+                    get_results_c(&ebu, black_box(mode_c));
                 })
             });
         }
         group.bench_function("Rust", |b| {
             b.iter(|| {
-                ebur128_f32(
-                    black_box(2),
-                    black_box(48_000),
-                    black_box(mode),
-                    black_box(&data),
-                )
+                let mut ebu =
+                    EbuR128::new(black_box(2), black_box(48_000), black_box(mode)).unwrap();
+                ebu.add_frames_f32(&data).unwrap();
+
+                get_results(&ebu, black_box(mode));
             })
         });
 
@@ -512,29 +266,27 @@ pub fn criterion_benchmark(c: &mut Criterion) {
             accumulator += step;
         }
 
-        let mut group = c.benchmark_group(format!("ebur128: 48kHz f64 2ch {}", name));
+        let mut group = c.benchmark_group(format!("ebur128 process: 48kHz f64 2ch {}", name));
 
         #[cfg(feature = "c-tests")]
         {
             group.bench_function("C", |b| {
                 b.iter(|| {
-                    ebur128_f64_c(
-                        black_box(2),
-                        black_box(48_000),
-                        black_box(mode_c),
-                        black_box(&data),
-                    )
+                    let mut ebu =
+                        EbuR128C::new(black_box(2), black_box(48_000), black_box(mode_c)).unwrap();
+                    ebu.add_frames_f64(&data).unwrap();
+
+                    get_results_c(&ebu, black_box(mode_c));
                 })
             });
         }
         group.bench_function("Rust", |b| {
             b.iter(|| {
-                ebur128_f64(
-                    black_box(2),
-                    black_box(48_000),
-                    black_box(mode),
-                    black_box(&data),
-                )
+                let mut ebu =
+                    EbuR128::new(black_box(2), black_box(48_000), black_box(mode)).unwrap();
+                ebu.add_frames_f64(&data).unwrap();
+
+                get_results(&ebu, black_box(mode));
             })
         });
 

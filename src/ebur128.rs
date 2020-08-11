@@ -409,6 +409,26 @@ impl EbuR128 {
         })
     }
 
+    /// Get the configured mode.
+    pub fn mode(&self) -> Mode {
+        self.mode
+    }
+
+    /// Get the configured number of channels.
+    pub fn channels(&self) -> u32 {
+        self.channels
+    }
+
+    /// Get the configured sample rate.
+    pub fn rate(&self) -> u32 {
+        self.rate
+    }
+
+    /// Get the configured channel types.
+    pub fn channel_map(&self) -> &[Channel] {
+        &*self.channel_map
+    }
+
     /// Set channel type.
     ///
     /// The default is:

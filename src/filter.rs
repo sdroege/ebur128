@@ -349,7 +349,53 @@ extern "C" {
 mod tests {
     use super::*;
     use crate::tests::Signal;
+    use float_cmp::approx_eq;
     use quickcheck_macros::quickcheck;
+
+    fn compare_results(
+        calculate_sample_peak: bool,
+        calculate_true_peak: bool,
+        sp: &[f64],
+        tp: &[f64],
+        sp_c: &[f64],
+        tp_c: &[f64],
+        data_out: &[f64],
+        data_out_c: &[f64],
+    ) {
+        if calculate_sample_peak {
+            for (i, (r, c)) in sp.iter().zip(sp_c.iter()).enumerate() {
+                assert!(
+                    approx_eq!(f64, *r, *c, ulps = 2),
+                    "Rust and C implementation differ at sample peak {}: {} != {}",
+                    i,
+                    r,
+                    c
+                );
+            }
+        }
+
+        if calculate_true_peak {
+            for (i, (r, c)) in tp.iter().zip(tp_c.iter()).enumerate() {
+                assert!(
+                    approx_eq!(f64, *r, *c, ulps = 2),
+                    "Rust and C implementation differ at true peak {}: {} != {}",
+                    i,
+                    r,
+                    c
+                );
+            }
+        }
+
+        for (i, (r, c)) in data_out.iter().zip(data_out_c.iter()).enumerate() {
+            assert!(
+                approx_eq!(f64, *r, *c, ulps = 2),
+                "Rust and C implementation differ at sample {}: {} != {}",
+                i,
+                r,
+                c
+            );
+        }
+    }
 
     #[quickcheck]
     fn compare_c_impl_i16(
@@ -357,8 +403,6 @@ mod tests {
         calculate_sample_peak: bool,
         calculate_true_peak: bool,
     ) {
-        use float_cmp::approx_eq;
-
         // Maximum of 400ms but our input is up to 5000ms, so distribute it evenly
         // by shrinking accordingly.
         let frames = signal.data.len() / signal.channels as usize;
@@ -415,39 +459,16 @@ mod tests {
             (sp, tp)
         };
 
-        if calculate_sample_peak {
-            for (i, (r, c)) in sp.iter().zip(sp_c.iter()).enumerate() {
-                assert!(
-                    approx_eq!(f64, *r, *c, ulps = 2),
-                    "Rust and C implementation differ at sample peak {}: {} != {}",
-                    i,
-                    r,
-                    c
-                );
-            }
-        }
-
-        if calculate_true_peak {
-            for (i, (r, c)) in tp.iter().zip(tp_c.iter()).enumerate() {
-                assert!(
-                    approx_eq!(f64, *r, *c, ulps = 2),
-                    "Rust and C implementation differ at true peak {}: {} != {}",
-                    i,
-                    r,
-                    c
-                );
-            }
-        }
-
-        for (i, (r, c)) in data_out.iter().zip(data_out_c.iter()).enumerate() {
-            assert!(
-                approx_eq!(f64, *r, *c, ulps = 2),
-                "Rust and C implementation differ at sample {}: {} != {}",
-                i,
-                r,
-                c
-            );
-        }
+        compare_results(
+            calculate_sample_peak,
+            calculate_true_peak,
+            &sp,
+            &tp,
+            &sp_c,
+            &tp_c,
+            &data_out,
+            &data_out_c,
+        );
     }
 
     #[quickcheck]
@@ -456,8 +477,6 @@ mod tests {
         calculate_sample_peak: bool,
         calculate_true_peak: bool,
     ) {
-        use float_cmp::approx_eq;
-
         // Maximum of 400ms but our input is up to 5000ms, so distribute it evenly
         // by shrinking accordingly.
         let frames = signal.data.len() / signal.channels as usize;
@@ -514,39 +533,16 @@ mod tests {
             (sp, tp)
         };
 
-        if calculate_sample_peak {
-            for (i, (r, c)) in sp.iter().zip(sp_c.iter()).enumerate() {
-                assert!(
-                    approx_eq!(f64, *r, *c, ulps = 2),
-                    "Rust and C implementation differ at sample peak {}: {} != {}",
-                    i,
-                    r,
-                    c
-                );
-            }
-        }
-
-        if calculate_true_peak {
-            for (i, (r, c)) in tp.iter().zip(tp_c.iter()).enumerate() {
-                assert!(
-                    approx_eq!(f64, *r, *c, ulps = 2),
-                    "Rust and C implementation differ at true peak {}: {} != {}",
-                    i,
-                    r,
-                    c
-                );
-            }
-        }
-
-        for (i, (r, c)) in data_out.iter().zip(data_out_c.iter()).enumerate() {
-            assert!(
-                approx_eq!(f64, *r, *c, ulps = 2),
-                "Rust and C implementation differ at sample {}: {} != {}",
-                i,
-                r,
-                c
-            );
-        }
+        compare_results(
+            calculate_sample_peak,
+            calculate_true_peak,
+            &sp,
+            &tp,
+            &sp_c,
+            &tp_c,
+            &data_out,
+            &data_out_c,
+        );
     }
 
     #[quickcheck]
@@ -555,8 +551,6 @@ mod tests {
         calculate_sample_peak: bool,
         calculate_true_peak: bool,
     ) {
-        use float_cmp::approx_eq;
-
         // Maximum of 400ms but our input is up to 5000ms, so distribute it evenly
         // by shrinking accordingly.
         let frames = signal.data.len() / signal.channels as usize;
@@ -613,39 +607,16 @@ mod tests {
             (sp, tp)
         };
 
-        if calculate_sample_peak {
-            for (i, (r, c)) in sp.iter().zip(sp_c.iter()).enumerate() {
-                assert!(
-                    approx_eq!(f64, *r, *c, ulps = 2),
-                    "Rust and C implementation differ at sample peak {}: {} != {}",
-                    i,
-                    r,
-                    c
-                );
-            }
-        }
-
-        if calculate_true_peak {
-            for (i, (r, c)) in tp.iter().zip(tp_c.iter()).enumerate() {
-                assert!(
-                    approx_eq!(f64, *r, *c, ulps = 2),
-                    "Rust and C implementation differ at true peak {}: {} != {}",
-                    i,
-                    r,
-                    c
-                );
-            }
-        }
-
-        for (i, (r, c)) in data_out.iter().zip(data_out_c.iter()).enumerate() {
-            assert!(
-                approx_eq!(f64, *r, *c, ulps = 2),
-                "Rust and C implementation differ at sample {}: {} != {}",
-                i,
-                r,
-                c
-            );
-        }
+        compare_results(
+            calculate_sample_peak,
+            calculate_true_peak,
+            &sp,
+            &tp,
+            &sp_c,
+            &tp_c,
+            &data_out,
+            &data_out_c,
+        );
     }
 
     #[quickcheck]
@@ -654,8 +625,6 @@ mod tests {
         calculate_sample_peak: bool,
         calculate_true_peak: bool,
     ) {
-        use float_cmp::approx_eq;
-
         // Maximum of 400ms but our input is up to 5000ms, so distribute it evenly
         // by shrinking accordingly.
         let frames = signal.data.len() / signal.channels as usize;
@@ -712,38 +681,15 @@ mod tests {
             (sp, tp)
         };
 
-        if calculate_sample_peak {
-            for (i, (r, c)) in sp.iter().zip(sp_c.iter()).enumerate() {
-                assert!(
-                    approx_eq!(f64, *r, *c, ulps = 2),
-                    "Rust and C implementation differ at sample peak {}: {} != {}",
-                    i,
-                    r,
-                    c
-                );
-            }
-        }
-
-        if calculate_true_peak {
-            for (i, (r, c)) in tp.iter().zip(tp_c.iter()).enumerate() {
-                assert!(
-                    approx_eq!(f64, *r, *c, ulps = 2),
-                    "Rust and C implementation differ at true peak {}: {} != {}",
-                    i,
-                    r,
-                    c
-                );
-            }
-        }
-
-        for (i, (r, c)) in data_out.iter().zip(data_out_c.iter()).enumerate() {
-            assert!(
-                approx_eq!(f64, *r, *c, ulps = 2),
-                "Rust and C implementation differ at sample {}: {} != {}",
-                i,
-                r,
-                c
-            );
-        }
+        compare_results(
+            calculate_sample_peak,
+            calculate_true_peak,
+            &sp,
+            &tp,
+            &sp_c,
+            &tp_c,
+            &data_out,
+            &data_out_c,
+        );
     }
 }

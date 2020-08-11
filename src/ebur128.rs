@@ -901,10 +901,24 @@ mod tests {
     #[cfg(feature = "c-tests")]
     use quickcheck_macros::quickcheck;
 
+    #[cfg(feature = "c-tests")]
     macro_rules! assert_eq_f64(
         ($a:expr, $b:expr) => {
             assert!(
                 float_cmp::approx_eq!(f64, $a, $b, ulps = 2),
+                "{} != {}",
+                $a,
+                $b,
+            )
+        }
+    );
+
+    // Don't check that accurately because the results differ a bit depending
+    // on the CPU.
+    macro_rules! assert_eq_f64_eps(
+        ($a:expr, $b:expr) => {
+            assert!(
+                float_cmp::approx_eq!(f64, $a, $b, epsilon = 0.000001),
                 "{} != {}",
                 $a,
                 $b,
@@ -927,23 +941,23 @@ mod tests {
         let mut ebu = EbuR128::new(2, 48_000, Mode::all()).unwrap();
         ebu.add_frames_i16(&data).unwrap();
 
-        assert_eq_f64!(ebu.loudness_global().unwrap(), -0.6500000000000054);
-        assert_eq_f64!(ebu.loudness_momentary().unwrap(), -0.6820309226891973);
-        assert_eq_f64!(ebu.loudness_shortterm().unwrap(), -0.6834583474398446);
-        assert_eq_f64!(ebu.loudness_window(1).unwrap(), -0.875007988101488);
-        assert_eq_f64!(ebu.loudness_range().unwrap(), 0.0);
+        assert_eq_f64_eps!(ebu.loudness_global().unwrap(), -0.6500000000000054);
+        assert_eq_f64_eps!(ebu.loudness_momentary().unwrap(), -0.6820309226891973);
+        assert_eq_f64_eps!(ebu.loudness_shortterm().unwrap(), -0.6834583474398446);
+        assert_eq_f64_eps!(ebu.loudness_window(1).unwrap(), -0.875007988101488);
+        assert_eq_f64_eps!(ebu.loudness_range().unwrap(), 0.0);
 
-        assert_eq_f64!(ebu.sample_peak(0).unwrap(), 0.99993896484375);
-        assert_eq_f64!(ebu.sample_peak(1).unwrap(), 0.99993896484375);
-        assert_eq_f64!(ebu.prev_sample_peak(0).unwrap(), 0.99993896484375);
-        assert_eq_f64!(ebu.prev_sample_peak(1).unwrap(), 0.99993896484375);
+        assert_eq_f64_eps!(ebu.sample_peak(0).unwrap(), 0.99993896484375);
+        assert_eq_f64_eps!(ebu.sample_peak(1).unwrap(), 0.99993896484375);
+        assert_eq_f64_eps!(ebu.prev_sample_peak(0).unwrap(), 0.99993896484375);
+        assert_eq_f64_eps!(ebu.prev_sample_peak(1).unwrap(), 0.99993896484375);
 
-        assert_eq_f64!(ebu.true_peak(0).unwrap(), 1.0007814168930054);
-        assert_eq_f64!(ebu.true_peak(1).unwrap(), 1.0007814168930054);
-        assert_eq_f64!(ebu.prev_true_peak(0).unwrap(), 1.0007814168930054);
-        assert_eq_f64!(ebu.prev_true_peak(1).unwrap(), 1.0007814168930054);
+        assert_eq_f64_eps!(ebu.true_peak(0).unwrap(), 1.0007814168930054);
+        assert_eq_f64_eps!(ebu.true_peak(1).unwrap(), 1.0007814168930054);
+        assert_eq_f64_eps!(ebu.prev_true_peak(0).unwrap(), 1.0007814168930054);
+        assert_eq_f64_eps!(ebu.prev_true_peak(1).unwrap(), 1.0007814168930054);
 
-        assert_eq_f64!(ebu.relative_threshold().unwrap(), -10.650000000000006);
+        assert_eq_f64_eps!(ebu.relative_threshold().unwrap(), -10.650000000000006);
     }
 
     #[test]
@@ -961,23 +975,23 @@ mod tests {
         let mut ebu = EbuR128::new(2, 48_000, Mode::all()).unwrap();
         ebu.add_frames_i32(&data).unwrap();
 
-        assert_eq_f64!(ebu.loudness_global().unwrap(), -0.6500000000000054);
-        assert_eq_f64!(ebu.loudness_momentary().unwrap(), -0.6813325598274425);
-        assert_eq_f64!(ebu.loudness_shortterm().unwrap(), -0.6827591715105212);
-        assert_eq_f64!(ebu.loudness_window(1).unwrap(), -0.8742956620040943);
-        assert_eq_f64!(ebu.loudness_range().unwrap(), 0.0);
+        assert_eq_f64_eps!(ebu.loudness_global().unwrap(), -0.6500000000000054);
+        assert_eq_f64_eps!(ebu.loudness_momentary().unwrap(), -0.6813325598274425);
+        assert_eq_f64_eps!(ebu.loudness_shortterm().unwrap(), -0.6827591715105212);
+        assert_eq_f64_eps!(ebu.loudness_window(1).unwrap(), -0.8742956620040943);
+        assert_eq_f64_eps!(ebu.loudness_range().unwrap(), 0.0);
 
-        assert_eq_f64!(ebu.sample_peak(0).unwrap(), 1.0);
-        assert_eq_f64!(ebu.sample_peak(1).unwrap(), 1.0);
-        assert_eq_f64!(ebu.prev_sample_peak(0).unwrap(), 1.0);
-        assert_eq_f64!(ebu.prev_sample_peak(1).unwrap(), 1.0);
+        assert_eq_f64_eps!(ebu.sample_peak(0).unwrap(), 1.0);
+        assert_eq_f64_eps!(ebu.sample_peak(1).unwrap(), 1.0);
+        assert_eq_f64_eps!(ebu.prev_sample_peak(0).unwrap(), 1.0);
+        assert_eq_f64_eps!(ebu.prev_sample_peak(1).unwrap(), 1.0);
 
-        assert_eq_f64!(ebu.true_peak(0).unwrap(), 1.0008491277694702);
-        assert_eq_f64!(ebu.true_peak(1).unwrap(), 1.0008491277694702);
-        assert_eq_f64!(ebu.prev_true_peak(0).unwrap(), 1.0008491277694702);
-        assert_eq_f64!(ebu.prev_true_peak(1).unwrap(), 1.0008491277694702);
+        assert_eq_f64_eps!(ebu.true_peak(0).unwrap(), 1.0008491277694702);
+        assert_eq_f64_eps!(ebu.true_peak(1).unwrap(), 1.0008491277694702);
+        assert_eq_f64_eps!(ebu.prev_true_peak(0).unwrap(), 1.0008491277694702);
+        assert_eq_f64_eps!(ebu.prev_true_peak(1).unwrap(), 1.0008491277694702);
 
-        assert_eq_f64!(ebu.relative_threshold().unwrap(), -10.650000000000006);
+        assert_eq_f64_eps!(ebu.relative_threshold().unwrap(), -10.650000000000006);
     }
 
     #[test]
@@ -995,23 +1009,23 @@ mod tests {
         let mut ebu = EbuR128::new(2, 48_000, Mode::all()).unwrap();
         ebu.add_frames_f32(&data).unwrap();
 
-        assert_eq_f64!(ebu.loudness_global().unwrap(), -0.6500000000000054);
-        assert_eq_f64!(ebu.loudness_momentary().unwrap(), -0.6813325598268921);
-        assert_eq_f64!(ebu.loudness_shortterm().unwrap(), -0.6827591715100236);
-        assert_eq_f64!(ebu.loudness_window(1).unwrap(), -0.8742956620008693);
-        assert_eq_f64!(ebu.loudness_range().unwrap(), 0.0);
+        assert_eq_f64_eps!(ebu.loudness_global().unwrap(), -0.6500000000000054);
+        assert_eq_f64_eps!(ebu.loudness_momentary().unwrap(), -0.6813325598268921);
+        assert_eq_f64_eps!(ebu.loudness_shortterm().unwrap(), -0.6827591715100236);
+        assert_eq_f64_eps!(ebu.loudness_window(1).unwrap(), -0.8742956620008693);
+        assert_eq_f64_eps!(ebu.loudness_range().unwrap(), 0.0);
 
-        assert_eq_f64!(ebu.sample_peak(0).unwrap(), 1.0);
-        assert_eq_f64!(ebu.sample_peak(1).unwrap(), 1.0);
-        assert_eq_f64!(ebu.prev_sample_peak(0).unwrap(), 1.0);
-        assert_eq_f64!(ebu.prev_sample_peak(1).unwrap(), 1.0);
+        assert_eq_f64_eps!(ebu.sample_peak(0).unwrap(), 1.0);
+        assert_eq_f64_eps!(ebu.sample_peak(1).unwrap(), 1.0);
+        assert_eq_f64_eps!(ebu.prev_sample_peak(0).unwrap(), 1.0);
+        assert_eq_f64_eps!(ebu.prev_sample_peak(1).unwrap(), 1.0);
 
-        assert_eq_f64!(ebu.true_peak(0).unwrap(), 1.0008491277694702);
-        assert_eq_f64!(ebu.true_peak(1).unwrap(), 1.0008491277694702);
-        assert_eq_f64!(ebu.prev_true_peak(0).unwrap(), 1.0008491277694702);
-        assert_eq_f64!(ebu.prev_true_peak(1).unwrap(), 1.0008491277694702);
+        assert_eq_f64_eps!(ebu.true_peak(0).unwrap(), 1.0008491277694702);
+        assert_eq_f64_eps!(ebu.true_peak(1).unwrap(), 1.0008491277694702);
+        assert_eq_f64_eps!(ebu.prev_true_peak(0).unwrap(), 1.0008491277694702);
+        assert_eq_f64_eps!(ebu.prev_true_peak(1).unwrap(), 1.0008491277694702);
 
-        assert_eq_f64!(ebu.relative_threshold().unwrap(), -10.650000000000006);
+        assert_eq_f64_eps!(ebu.relative_threshold().unwrap(), -10.650000000000006);
     }
 
     #[test]
@@ -1029,23 +1043,23 @@ mod tests {
         let mut ebu = EbuR128::new(2, 48_000, Mode::all()).unwrap();
         ebu.add_frames_f64(&data).unwrap();
 
-        assert_eq_f64!(ebu.loudness_global().unwrap(), -0.6500000000000054);
-        assert_eq_f64!(ebu.loudness_momentary().unwrap(), -0.6813325598268921);
-        assert_eq_f64!(ebu.loudness_shortterm().unwrap(), -0.6827591715100236);
-        assert_eq_f64!(ebu.loudness_window(1).unwrap(), -0.8742956620008693);
-        assert_eq_f64!(ebu.loudness_range().unwrap(), 0.0);
+        assert_eq_f64_eps!(ebu.loudness_global().unwrap(), -0.6500000000000054);
+        assert_eq_f64_eps!(ebu.loudness_momentary().unwrap(), -0.6813325598268921);
+        assert_eq_f64_eps!(ebu.loudness_shortterm().unwrap(), -0.6827591715100236);
+        assert_eq_f64_eps!(ebu.loudness_window(1).unwrap(), -0.8742956620008693);
+        assert_eq_f64_eps!(ebu.loudness_range().unwrap(), 0.0);
 
-        assert_eq_f64!(ebu.sample_peak(0).unwrap(), 1.0);
-        assert_eq_f64!(ebu.sample_peak(1).unwrap(), 1.0);
-        assert_eq_f64!(ebu.prev_sample_peak(0).unwrap(), 1.0);
-        assert_eq_f64!(ebu.prev_sample_peak(1).unwrap(), 1.0);
+        assert_eq_f64_eps!(ebu.sample_peak(0).unwrap(), 1.0);
+        assert_eq_f64_eps!(ebu.sample_peak(1).unwrap(), 1.0);
+        assert_eq_f64_eps!(ebu.prev_sample_peak(0).unwrap(), 1.0);
+        assert_eq_f64_eps!(ebu.prev_sample_peak(1).unwrap(), 1.0);
 
-        assert_eq_f64!(ebu.true_peak(0).unwrap(), 1.0008491277694702);
-        assert_eq_f64!(ebu.true_peak(1).unwrap(), 1.0008491277694702);
-        assert_eq_f64!(ebu.prev_true_peak(0).unwrap(), 1.0008491277694702);
-        assert_eq_f64!(ebu.prev_true_peak(1).unwrap(), 1.0008491277694702);
+        assert_eq_f64_eps!(ebu.true_peak(0).unwrap(), 1.0008491277694702);
+        assert_eq_f64_eps!(ebu.true_peak(1).unwrap(), 1.0008491277694702);
+        assert_eq_f64_eps!(ebu.prev_true_peak(0).unwrap(), 1.0008491277694702);
+        assert_eq_f64_eps!(ebu.prev_true_peak(1).unwrap(), 1.0008491277694702);
 
-        assert_eq_f64!(ebu.relative_threshold().unwrap(), -10.650000000000006);
+        assert_eq_f64_eps!(ebu.relative_threshold().unwrap(), -10.650000000000006);
     }
 
     #[test]
@@ -1063,23 +1077,23 @@ mod tests {
         let mut ebu = EbuR128::new(2, 48_000, Mode::all() & !Mode::HISTOGRAM).unwrap();
         ebu.add_frames_i16(&data).unwrap();
 
-        assert_eq_f64!(ebu.loudness_global().unwrap(), -0.683303243667768);
-        assert_eq_f64!(ebu.loudness_momentary().unwrap(), -0.6820309226891973);
-        assert_eq_f64!(ebu.loudness_shortterm().unwrap(), -0.6834583474398446);
-        assert_eq_f64!(ebu.loudness_window(1).unwrap(), -0.875007988101488);
-        assert_eq_f64!(ebu.loudness_range().unwrap(), 0.00006950793233284625);
+        assert_eq_f64_eps!(ebu.loudness_global().unwrap(), -0.683303243667768);
+        assert_eq_f64_eps!(ebu.loudness_momentary().unwrap(), -0.6820309226891973);
+        assert_eq_f64_eps!(ebu.loudness_shortterm().unwrap(), -0.6834583474398446);
+        assert_eq_f64_eps!(ebu.loudness_window(1).unwrap(), -0.875007988101488);
+        assert_eq_f64_eps!(ebu.loudness_range().unwrap(), 0.00006950793233284625);
 
-        assert_eq_f64!(ebu.sample_peak(0).unwrap(), 0.99993896484375);
-        assert_eq_f64!(ebu.sample_peak(1).unwrap(), 0.99993896484375);
-        assert_eq_f64!(ebu.prev_sample_peak(0).unwrap(), 0.99993896484375);
-        assert_eq_f64!(ebu.prev_sample_peak(1).unwrap(), 0.99993896484375);
+        assert_eq_f64_eps!(ebu.sample_peak(0).unwrap(), 0.99993896484375);
+        assert_eq_f64_eps!(ebu.sample_peak(1).unwrap(), 0.99993896484375);
+        assert_eq_f64_eps!(ebu.prev_sample_peak(0).unwrap(), 0.99993896484375);
+        assert_eq_f64_eps!(ebu.prev_sample_peak(1).unwrap(), 0.99993896484375);
 
-        assert_eq_f64!(ebu.true_peak(0).unwrap(), 1.0007814168930054);
-        assert_eq_f64!(ebu.true_peak(1).unwrap(), 1.0007814168930054);
-        assert_eq_f64!(ebu.prev_true_peak(0).unwrap(), 1.0007814168930054);
-        assert_eq_f64!(ebu.prev_true_peak(1).unwrap(), 1.0007814168930054);
+        assert_eq_f64_eps!(ebu.true_peak(0).unwrap(), 1.0007814168930054);
+        assert_eq_f64_eps!(ebu.true_peak(1).unwrap(), 1.0007814168930054);
+        assert_eq_f64_eps!(ebu.prev_true_peak(0).unwrap(), 1.0007814168930054);
+        assert_eq_f64_eps!(ebu.prev_true_peak(1).unwrap(), 1.0007814168930054);
 
-        assert_eq_f64!(ebu.relative_threshold().unwrap(), -10.683303243667767);
+        assert_eq_f64_eps!(ebu.relative_threshold().unwrap(), -10.683303243667767);
     }
 
     #[test]
@@ -1097,23 +1111,23 @@ mod tests {
         let mut ebu = EbuR128::new(2, 48_000, Mode::all() & !Mode::HISTOGRAM).unwrap();
         ebu.add_frames_i32(&data).unwrap();
 
-        assert_eq_f64!(ebu.loudness_global().unwrap(), -0.6826039914171368);
-        assert_eq_f64!(ebu.loudness_momentary().unwrap(), -0.6813325598274425);
-        assert_eq_f64!(ebu.loudness_shortterm().unwrap(), -0.6827591715105212);
-        assert_eq_f64!(ebu.loudness_window(1).unwrap(), -0.8742956620040943);
-        assert_eq_f64!(ebu.loudness_range().unwrap(), 0.00006921150165073442);
+        assert_eq_f64_eps!(ebu.loudness_global().unwrap(), -0.6826039914171368);
+        assert_eq_f64_eps!(ebu.loudness_momentary().unwrap(), -0.6813325598274425);
+        assert_eq_f64_eps!(ebu.loudness_shortterm().unwrap(), -0.6827591715105212);
+        assert_eq_f64_eps!(ebu.loudness_window(1).unwrap(), -0.8742956620040943);
+        assert_eq_f64_eps!(ebu.loudness_range().unwrap(), 0.00006921150165073442);
 
-        assert_eq_f64!(ebu.sample_peak(0).unwrap(), 1.0);
-        assert_eq_f64!(ebu.sample_peak(1).unwrap(), 1.0);
-        assert_eq_f64!(ebu.prev_sample_peak(0).unwrap(), 1.0);
-        assert_eq_f64!(ebu.prev_sample_peak(1).unwrap(), 1.0);
+        assert_eq_f64_eps!(ebu.sample_peak(0).unwrap(), 1.0);
+        assert_eq_f64_eps!(ebu.sample_peak(1).unwrap(), 1.0);
+        assert_eq_f64_eps!(ebu.prev_sample_peak(0).unwrap(), 1.0);
+        assert_eq_f64_eps!(ebu.prev_sample_peak(1).unwrap(), 1.0);
 
-        assert_eq_f64!(ebu.true_peak(0).unwrap(), 1.0008491277694702);
-        assert_eq_f64!(ebu.true_peak(1).unwrap(), 1.0008491277694702);
-        assert_eq_f64!(ebu.prev_true_peak(0).unwrap(), 1.0008491277694702);
-        assert_eq_f64!(ebu.prev_true_peak(1).unwrap(), 1.0008491277694702);
+        assert_eq_f64_eps!(ebu.true_peak(0).unwrap(), 1.0008491277694702);
+        assert_eq_f64_eps!(ebu.true_peak(1).unwrap(), 1.0008491277694702);
+        assert_eq_f64_eps!(ebu.prev_true_peak(0).unwrap(), 1.0008491277694702);
+        assert_eq_f64_eps!(ebu.prev_true_peak(1).unwrap(), 1.0008491277694702);
 
-        assert_eq_f64!(ebu.relative_threshold().unwrap(), -10.682603991417135);
+        assert_eq_f64_eps!(ebu.relative_threshold().unwrap(), -10.682603991417135);
     }
 
     #[test]
@@ -1131,23 +1145,23 @@ mod tests {
         let mut ebu = EbuR128::new(2, 48_000, Mode::all() & !Mode::HISTOGRAM).unwrap();
         ebu.add_frames_f32(&data).unwrap();
 
-        assert_eq_f64!(ebu.loudness_global().unwrap(), -0.6826039914165554);
-        assert_eq_f64!(ebu.loudness_momentary().unwrap(), -0.6813325598268921);
-        assert_eq_f64!(ebu.loudness_shortterm().unwrap(), -0.6827591715100236);
-        assert_eq_f64!(ebu.loudness_window(1).unwrap(), -0.8742956620008693);
-        assert_eq_f64!(ebu.loudness_range().unwrap(), 0.00006921150169403312);
+        assert_eq_f64_eps!(ebu.loudness_global().unwrap(), -0.6826039914165554);
+        assert_eq_f64_eps!(ebu.loudness_momentary().unwrap(), -0.6813325598268921);
+        assert_eq_f64_eps!(ebu.loudness_shortterm().unwrap(), -0.6827591715100236);
+        assert_eq_f64_eps!(ebu.loudness_window(1).unwrap(), -0.8742956620008693);
+        assert_eq_f64_eps!(ebu.loudness_range().unwrap(), 0.00006921150169403312);
 
-        assert_eq_f64!(ebu.sample_peak(0).unwrap(), 1.0);
-        assert_eq_f64!(ebu.sample_peak(1).unwrap(), 1.0);
-        assert_eq_f64!(ebu.prev_sample_peak(0).unwrap(), 1.0);
-        assert_eq_f64!(ebu.prev_sample_peak(1).unwrap(), 1.0);
+        assert_eq_f64_eps!(ebu.sample_peak(0).unwrap(), 1.0);
+        assert_eq_f64_eps!(ebu.sample_peak(1).unwrap(), 1.0);
+        assert_eq_f64_eps!(ebu.prev_sample_peak(0).unwrap(), 1.0);
+        assert_eq_f64_eps!(ebu.prev_sample_peak(1).unwrap(), 1.0);
 
-        assert_eq_f64!(ebu.true_peak(0).unwrap(), 1.0008491277694702);
-        assert_eq_f64!(ebu.true_peak(1).unwrap(), 1.0008491277694702);
-        assert_eq_f64!(ebu.prev_true_peak(0).unwrap(), 1.0008491277694702);
-        assert_eq_f64!(ebu.prev_true_peak(1).unwrap(), 1.0008491277694702);
+        assert_eq_f64_eps!(ebu.true_peak(0).unwrap(), 1.0008491277694702);
+        assert_eq_f64_eps!(ebu.true_peak(1).unwrap(), 1.0008491277694702);
+        assert_eq_f64_eps!(ebu.prev_true_peak(0).unwrap(), 1.0008491277694702);
+        assert_eq_f64_eps!(ebu.prev_true_peak(1).unwrap(), 1.0008491277694702);
 
-        assert_eq_f64!(ebu.relative_threshold().unwrap(), -10.682603991416554);
+        assert_eq_f64_eps!(ebu.relative_threshold().unwrap(), -10.682603991416554);
     }
 
     #[test]
@@ -1165,23 +1179,66 @@ mod tests {
         let mut ebu = EbuR128::new(2, 48_000, Mode::all() & !Mode::HISTOGRAM).unwrap();
         ebu.add_frames_f64(&data).unwrap();
 
-        assert_eq_f64!(ebu.loudness_global().unwrap(), -0.6826039914165554);
-        assert_eq_f64!(ebu.loudness_momentary().unwrap(), -0.6813325598268921);
-        assert_eq_f64!(ebu.loudness_shortterm().unwrap(), -0.6827591715100236);
-        assert_eq_f64!(ebu.loudness_window(1).unwrap(), -0.8742956620008693);
-        assert_eq_f64!(ebu.loudness_range().unwrap(), 0.00006921150169403312);
+        assert_eq_f64_eps!(ebu.loudness_global().unwrap(), -0.6826039914165554);
+        assert_eq_f64_eps!(ebu.loudness_momentary().unwrap(), -0.6813325598268921);
+        assert_eq_f64_eps!(ebu.loudness_shortterm().unwrap(), -0.6827591715100236);
+        assert_eq_f64_eps!(ebu.loudness_window(1).unwrap(), -0.8742956620008693);
+        assert_eq_f64_eps!(ebu.loudness_range().unwrap(), 0.00006921150169403312);
 
-        assert_eq_f64!(ebu.sample_peak(0).unwrap(), 1.0);
-        assert_eq_f64!(ebu.sample_peak(1).unwrap(), 1.0);
-        assert_eq_f64!(ebu.prev_sample_peak(0).unwrap(), 1.0);
-        assert_eq_f64!(ebu.prev_sample_peak(1).unwrap(), 1.0);
+        assert_eq_f64_eps!(ebu.sample_peak(0).unwrap(), 1.0);
+        assert_eq_f64_eps!(ebu.sample_peak(1).unwrap(), 1.0);
+        assert_eq_f64_eps!(ebu.prev_sample_peak(0).unwrap(), 1.0);
+        assert_eq_f64_eps!(ebu.prev_sample_peak(1).unwrap(), 1.0);
 
-        assert_eq_f64!(ebu.true_peak(0).unwrap(), 1.0008491277694702);
-        assert_eq_f64!(ebu.true_peak(1).unwrap(), 1.0008491277694702);
-        assert_eq_f64!(ebu.prev_true_peak(0).unwrap(), 1.0008491277694702);
-        assert_eq_f64!(ebu.prev_true_peak(1).unwrap(), 1.0008491277694702);
+        assert_eq_f64_eps!(ebu.true_peak(0).unwrap(), 1.0008491277694702);
+        assert_eq_f64_eps!(ebu.true_peak(1).unwrap(), 1.0008491277694702);
+        assert_eq_f64_eps!(ebu.prev_true_peak(0).unwrap(), 1.0008491277694702);
+        assert_eq_f64_eps!(ebu.prev_true_peak(1).unwrap(), 1.0008491277694702);
 
-        assert_eq_f64!(ebu.relative_threshold().unwrap(), -10.682603991416554);
+        assert_eq_f64_eps!(ebu.relative_threshold().unwrap(), -10.682603991416554);
+    }
+
+    #[cfg(feature = "c-tests")]
+    fn compare_results(ebu: &EbuR128, ebu_c: &ebur128_c::EbuR128, channels: u32) {
+        assert_eq_f64!(
+            ebu.loudness_global().unwrap(),
+            ebu_c.loudness_global().unwrap()
+        );
+        assert_eq_f64!(
+            ebu.loudness_momentary().unwrap(),
+            ebu_c.loudness_momentary().unwrap()
+        );
+        assert_eq_f64!(
+            ebu.loudness_shortterm().unwrap(),
+            ebu_c.loudness_shortterm().unwrap()
+        );
+        assert_eq_f64!(
+            ebu.loudness_window(1).unwrap(),
+            ebu_c.loudness_window(1).unwrap()
+        );
+        assert_eq_f64!(
+            ebu.loudness_range().unwrap(),
+            ebu_c.loudness_range().unwrap()
+        );
+
+        for c in 0..channels {
+            assert_eq_f64!(ebu.sample_peak(c).unwrap(), ebu_c.sample_peak(c).unwrap());
+            assert_eq_f64!(
+                ebu.prev_sample_peak(c).unwrap(),
+                ebu_c.prev_sample_peak(c).unwrap()
+            );
+
+            assert_eq_f64!(ebu.true_peak(c).unwrap(), ebu_c.true_peak(c).unwrap());
+            assert_eq_f64!(
+                ebu.prev_true_peak(c).unwrap(),
+                ebu_c.prev_true_peak(c).unwrap()
+            );
+        }
+
+        assert_eq_f64!(
+            ebu.relative_threshold().unwrap(),
+            ebu_c.relative_threshold().unwrap()
+        );
     }
 
     #[cfg(feature = "c-tests")]
@@ -1194,45 +1251,7 @@ mod tests {
             ebur128_c::EbuR128::new(signal.channels, signal.rate, ebur128_c::Mode::all()).unwrap();
         ebu_c.add_frames_i16(&signal.data).unwrap();
 
-        assert_eq_f64!(
-            ebu.loudness_global().unwrap(),
-            ebu_c.loudness_global().unwrap()
-        );
-        assert_eq_f64!(
-            ebu.loudness_momentary().unwrap(),
-            ebu_c.loudness_momentary().unwrap()
-        );
-        assert_eq_f64!(
-            ebu.loudness_shortterm().unwrap(),
-            ebu_c.loudness_shortterm().unwrap()
-        );
-        assert_eq_f64!(
-            ebu.loudness_window(1).unwrap(),
-            ebu_c.loudness_window(1).unwrap()
-        );
-        assert_eq_f64!(
-            ebu.loudness_range().unwrap(),
-            ebu_c.loudness_range().unwrap()
-        );
-
-        for c in 0..signal.channels {
-            assert_eq_f64!(ebu.sample_peak(c).unwrap(), ebu_c.sample_peak(c).unwrap());
-            assert_eq_f64!(
-                ebu.prev_sample_peak(c).unwrap(),
-                ebu_c.prev_sample_peak(c).unwrap()
-            );
-
-            assert_eq_f64!(ebu.true_peak(c).unwrap(), ebu_c.true_peak(c).unwrap());
-            assert_eq_f64!(
-                ebu.prev_true_peak(c).unwrap(),
-                ebu_c.prev_true_peak(c).unwrap()
-            );
-        }
-
-        assert_eq_f64!(
-            ebu.relative_threshold().unwrap(),
-            ebu_c.relative_threshold().unwrap()
-        );
+        compare_results(&ebu, &ebu_c, signal.channels);
     }
 
     #[cfg(feature = "c-tests")]
@@ -1245,45 +1264,7 @@ mod tests {
             ebur128_c::EbuR128::new(signal.channels, signal.rate, ebur128_c::Mode::all()).unwrap();
         ebu_c.add_frames_i32(&signal.data).unwrap();
 
-        assert_eq_f64!(
-            ebu.loudness_global().unwrap(),
-            ebu_c.loudness_global().unwrap()
-        );
-        assert_eq_f64!(
-            ebu.loudness_momentary().unwrap(),
-            ebu_c.loudness_momentary().unwrap()
-        );
-        assert_eq_f64!(
-            ebu.loudness_shortterm().unwrap(),
-            ebu_c.loudness_shortterm().unwrap()
-        );
-        assert_eq_f64!(
-            ebu.loudness_window(1).unwrap(),
-            ebu_c.loudness_window(1).unwrap()
-        );
-        assert_eq_f64!(
-            ebu.loudness_range().unwrap(),
-            ebu_c.loudness_range().unwrap()
-        );
-
-        for c in 0..signal.channels {
-            assert_eq_f64!(ebu.sample_peak(c).unwrap(), ebu_c.sample_peak(c).unwrap());
-            assert_eq_f64!(
-                ebu.prev_sample_peak(c).unwrap(),
-                ebu_c.prev_sample_peak(c).unwrap()
-            );
-
-            assert_eq_f64!(ebu.true_peak(c).unwrap(), ebu_c.true_peak(c).unwrap());
-            assert_eq_f64!(
-                ebu.prev_true_peak(c).unwrap(),
-                ebu_c.prev_true_peak(c).unwrap()
-            );
-        }
-
-        assert_eq_f64!(
-            ebu.relative_threshold().unwrap(),
-            ebu_c.relative_threshold().unwrap()
-        );
+        compare_results(&ebu, &ebu_c, signal.channels);
     }
 
     #[cfg(feature = "c-tests")]
@@ -1296,45 +1277,7 @@ mod tests {
             ebur128_c::EbuR128::new(signal.channels, signal.rate, ebur128_c::Mode::all()).unwrap();
         ebu_c.add_frames_f32(&signal.data).unwrap();
 
-        assert_eq_f64!(
-            ebu.loudness_global().unwrap(),
-            ebu_c.loudness_global().unwrap()
-        );
-        assert_eq_f64!(
-            ebu.loudness_momentary().unwrap(),
-            ebu_c.loudness_momentary().unwrap()
-        );
-        assert_eq_f64!(
-            ebu.loudness_shortterm().unwrap(),
-            ebu_c.loudness_shortterm().unwrap()
-        );
-        assert_eq_f64!(
-            ebu.loudness_window(1).unwrap(),
-            ebu_c.loudness_window(1).unwrap()
-        );
-        assert_eq_f64!(
-            ebu.loudness_range().unwrap(),
-            ebu_c.loudness_range().unwrap()
-        );
-
-        for c in 0..signal.channels {
-            assert_eq_f64!(ebu.sample_peak(c).unwrap(), ebu_c.sample_peak(c).unwrap());
-            assert_eq_f64!(
-                ebu.prev_sample_peak(c).unwrap(),
-                ebu_c.prev_sample_peak(c).unwrap()
-            );
-
-            assert_eq_f64!(ebu.true_peak(c).unwrap(), ebu_c.true_peak(c).unwrap());
-            assert_eq_f64!(
-                ebu.prev_true_peak(c).unwrap(),
-                ebu_c.prev_true_peak(c).unwrap()
-            );
-        }
-
-        assert_eq_f64!(
-            ebu.relative_threshold().unwrap(),
-            ebu_c.relative_threshold().unwrap()
-        );
+        compare_results(&ebu, &ebu_c, signal.channels);
     }
 
     #[cfg(feature = "c-tests")]
@@ -1347,45 +1290,7 @@ mod tests {
             ebur128_c::EbuR128::new(signal.channels, signal.rate, ebur128_c::Mode::all()).unwrap();
         ebu_c.add_frames_f64(&signal.data).unwrap();
 
-        assert_eq_f64!(
-            ebu.loudness_global().unwrap(),
-            ebu_c.loudness_global().unwrap()
-        );
-        assert_eq_f64!(
-            ebu.loudness_momentary().unwrap(),
-            ebu_c.loudness_momentary().unwrap()
-        );
-        assert_eq_f64!(
-            ebu.loudness_shortterm().unwrap(),
-            ebu_c.loudness_shortterm().unwrap()
-        );
-        assert_eq_f64!(
-            ebu.loudness_window(1).unwrap(),
-            ebu_c.loudness_window(1).unwrap()
-        );
-        assert_eq_f64!(
-            ebu.loudness_range().unwrap(),
-            ebu_c.loudness_range().unwrap()
-        );
-
-        for c in 0..signal.channels {
-            assert_eq_f64!(ebu.sample_peak(c).unwrap(), ebu_c.sample_peak(c).unwrap());
-            assert_eq_f64!(
-                ebu.prev_sample_peak(c).unwrap(),
-                ebu_c.prev_sample_peak(c).unwrap()
-            );
-
-            assert_eq_f64!(ebu.true_peak(c).unwrap(), ebu_c.true_peak(c).unwrap());
-            assert_eq_f64!(
-                ebu.prev_true_peak(c).unwrap(),
-                ebu_c.prev_true_peak(c).unwrap()
-            );
-        }
-
-        assert_eq_f64!(
-            ebu.relative_threshold().unwrap(),
-            ebu_c.relative_threshold().unwrap()
-        );
+        compare_results(&ebu, &ebu_c, signal.channels);
     }
 
     #[cfg(feature = "c-tests")]
@@ -1403,45 +1308,7 @@ mod tests {
         .unwrap();
         ebu_c.add_frames_i16(&signal.data).unwrap();
 
-        assert_eq_f64!(
-            ebu.loudness_global().unwrap(),
-            ebu_c.loudness_global().unwrap()
-        );
-        assert_eq_f64!(
-            ebu.loudness_momentary().unwrap(),
-            ebu_c.loudness_momentary().unwrap()
-        );
-        assert_eq_f64!(
-            ebu.loudness_shortterm().unwrap(),
-            ebu_c.loudness_shortterm().unwrap()
-        );
-        assert_eq_f64!(
-            ebu.loudness_window(1).unwrap(),
-            ebu_c.loudness_window(1).unwrap()
-        );
-        assert_eq_f64!(
-            ebu.loudness_range().unwrap(),
-            ebu_c.loudness_range().unwrap()
-        );
-
-        for c in 0..signal.channels {
-            assert_eq_f64!(ebu.sample_peak(c).unwrap(), ebu_c.sample_peak(c).unwrap());
-            assert_eq_f64!(
-                ebu.prev_sample_peak(c).unwrap(),
-                ebu_c.prev_sample_peak(c).unwrap()
-            );
-
-            assert_eq_f64!(ebu.true_peak(c).unwrap(), ebu_c.true_peak(c).unwrap());
-            assert_eq_f64!(
-                ebu.prev_true_peak(c).unwrap(),
-                ebu_c.prev_true_peak(c).unwrap()
-            );
-        }
-
-        assert_eq_f64!(
-            ebu.relative_threshold().unwrap(),
-            ebu_c.relative_threshold().unwrap()
-        );
+        compare_results(&ebu, &ebu_c, signal.channels);
     }
 
     #[cfg(feature = "c-tests")]
@@ -1459,45 +1326,7 @@ mod tests {
         .unwrap();
         ebu_c.add_frames_i32(&signal.data).unwrap();
 
-        assert_eq_f64!(
-            ebu.loudness_global().unwrap(),
-            ebu_c.loudness_global().unwrap()
-        );
-        assert_eq_f64!(
-            ebu.loudness_momentary().unwrap(),
-            ebu_c.loudness_momentary().unwrap()
-        );
-        assert_eq_f64!(
-            ebu.loudness_shortterm().unwrap(),
-            ebu_c.loudness_shortterm().unwrap()
-        );
-        assert_eq_f64!(
-            ebu.loudness_window(1).unwrap(),
-            ebu_c.loudness_window(1).unwrap()
-        );
-        assert_eq_f64!(
-            ebu.loudness_range().unwrap(),
-            ebu_c.loudness_range().unwrap()
-        );
-
-        for c in 0..signal.channels {
-            assert_eq_f64!(ebu.sample_peak(c).unwrap(), ebu_c.sample_peak(c).unwrap());
-            assert_eq_f64!(
-                ebu.prev_sample_peak(c).unwrap(),
-                ebu_c.prev_sample_peak(c).unwrap()
-            );
-
-            assert_eq_f64!(ebu.true_peak(c).unwrap(), ebu_c.true_peak(c).unwrap());
-            assert_eq_f64!(
-                ebu.prev_true_peak(c).unwrap(),
-                ebu_c.prev_true_peak(c).unwrap()
-            );
-        }
-
-        assert_eq_f64!(
-            ebu.relative_threshold().unwrap(),
-            ebu_c.relative_threshold().unwrap()
-        );
+        compare_results(&ebu, &ebu_c, signal.channels);
     }
 
     #[cfg(feature = "c-tests")]
@@ -1515,45 +1344,7 @@ mod tests {
         .unwrap();
         ebu_c.add_frames_f32(&signal.data).unwrap();
 
-        assert_eq_f64!(
-            ebu.loudness_global().unwrap(),
-            ebu_c.loudness_global().unwrap()
-        );
-        assert_eq_f64!(
-            ebu.loudness_momentary().unwrap(),
-            ebu_c.loudness_momentary().unwrap()
-        );
-        assert_eq_f64!(
-            ebu.loudness_shortterm().unwrap(),
-            ebu_c.loudness_shortterm().unwrap()
-        );
-        assert_eq_f64!(
-            ebu.loudness_window(1).unwrap(),
-            ebu_c.loudness_window(1).unwrap()
-        );
-        assert_eq_f64!(
-            ebu.loudness_range().unwrap(),
-            ebu_c.loudness_range().unwrap()
-        );
-
-        for c in 0..signal.channels {
-            assert_eq_f64!(ebu.sample_peak(c).unwrap(), ebu_c.sample_peak(c).unwrap());
-            assert_eq_f64!(
-                ebu.prev_sample_peak(c).unwrap(),
-                ebu_c.prev_sample_peak(c).unwrap()
-            );
-
-            assert_eq_f64!(ebu.true_peak(c).unwrap(), ebu_c.true_peak(c).unwrap());
-            assert_eq_f64!(
-                ebu.prev_true_peak(c).unwrap(),
-                ebu_c.prev_true_peak(c).unwrap()
-            );
-        }
-
-        assert_eq_f64!(
-            ebu.relative_threshold().unwrap(),
-            ebu_c.relative_threshold().unwrap()
-        );
+        compare_results(&ebu, &ebu_c, signal.channels);
     }
 
     #[cfg(feature = "c-tests")]
@@ -1571,45 +1362,7 @@ mod tests {
         .unwrap();
         ebu_c.add_frames_f64(&signal.data).unwrap();
 
-        assert_eq_f64!(
-            ebu.loudness_global().unwrap(),
-            ebu_c.loudness_global().unwrap()
-        );
-        assert_eq_f64!(
-            ebu.loudness_momentary().unwrap(),
-            ebu_c.loudness_momentary().unwrap()
-        );
-        assert_eq_f64!(
-            ebu.loudness_shortterm().unwrap(),
-            ebu_c.loudness_shortterm().unwrap()
-        );
-        assert_eq_f64!(
-            ebu.loudness_window(1).unwrap(),
-            ebu_c.loudness_window(1).unwrap()
-        );
-        assert_eq_f64!(
-            ebu.loudness_range().unwrap(),
-            ebu_c.loudness_range().unwrap()
-        );
-
-        for c in 0..signal.channels {
-            assert_eq_f64!(ebu.sample_peak(c).unwrap(), ebu_c.sample_peak(c).unwrap());
-            assert_eq_f64!(
-                ebu.prev_sample_peak(c).unwrap(),
-                ebu_c.prev_sample_peak(c).unwrap()
-            );
-
-            assert_eq_f64!(ebu.true_peak(c).unwrap(), ebu_c.true_peak(c).unwrap());
-            assert_eq_f64!(
-                ebu.prev_true_peak(c).unwrap(),
-                ebu_c.prev_true_peak(c).unwrap()
-            );
-        }
-
-        assert_eq_f64!(
-            ebu.relative_threshold().unwrap(),
-            ebu_c.relative_threshold().unwrap()
-        );
+        compare_results(&ebu, &ebu_c, signal.channels);
     }
 
     #[cfg(feature = "c-tests")]

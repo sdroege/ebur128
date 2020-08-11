@@ -439,6 +439,7 @@ impl EbuR128 {
     /// * 3 \-> `Unused`
     /// * 4 \-> `LeftSurround`
     /// * 5 \-> `RightSurround`
+    /// * _ \-> `Unused`
     pub fn set_channel(&mut self, channel_number: u32, value: Channel) -> Result<(), Error> {
         if channel_number >= self.channels {
             return Err(Error::InvalidChannelIndex);
@@ -449,6 +450,26 @@ impl EbuR128 {
         }
 
         self.channel_map[channel_number as usize] = value;
+        Ok(())
+    }
+
+    /// Set channel types.
+    ///
+    /// The default is:
+    ///
+    /// * 0 \-> `Left`
+    /// * 1 \-> `Right`
+    /// * 2 \-> `Center`
+    /// * 3 \-> `Unused`
+    /// * 4 \-> `LeftSurround`
+    /// * 5 \-> `RightSurround`
+    /// * _ \-> `Unused`
+    pub fn set_channel_map(&mut self, channel_map: &[Channel]) -> Result<(), Error> {
+        if channel_map.len() != self.channels as usize {
+            return Err(Error::InvalidChannelIndex);
+        }
+
+        self.channel_map.copy_from_slice(channel_map);
         Ok(())
     }
 

@@ -4,7 +4,9 @@ rust:
   - beta
   - nightly
 script:
-  - QUICKCHECK_TESTS=2 cargo test --features c-tests
+  - wget https://tech.ebu.ch/files/live/sites/tech/files/shared/testmaterial/ebu-loudness-test-setv05.zip
+  - unzip -u ebu-loudness-test-setv05.zip -d tests/reference_files
+  - QUICKCHECK_TESTS=2 cargo test --features c-tests,internal-tests,reference-tests
 matrix:
   allow_failures:
     - rust: nightly

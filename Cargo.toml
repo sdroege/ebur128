@@ -25,10 +25,12 @@ ebur128-c = { package = "ebur128", version = "=0.1.1" }
 quickcheck = "0.9"
 quickcheck_macros = "0.9"
 rand = "0.7"
+hound = "3"
 
 [features]
 internal-tests = []
 c-tests = ["cc", "internal-tests"] # and ebur128-c, quickcheck, quickcheck_macros, rand but dev-dependencies can't be optional...
+reference-tests = []
 
 [[bench]]
 name = "interp"
@@ -58,6 +60,10 @@ required-features = ["internal-tests"]
 [[bench]]
 name = "ebur128"
 harness = false
+
+[[test]]
+name = "reference_tests"
+required-features = ["reference-tests"]
 
 [profile.dev]
 opt-level = 1

@@ -8,6 +8,13 @@ pub fn criterion_benchmark(c: &mut Criterion) {
         *e = f64::powf(10.0, ((i % 1000) as f64 / 10.0 - 69.95 + 0.691) / 10.0);
     }
 
+    // Initialize histogram state in C and Rust code first
+    #[cfg(feature = "c-tests")]
+    unsafe {
+        history::history_init_c();
+    }
+    drop(black_box(history::History::new(true, 0)));
+
     for (histogram, name) in &[(true, "Histogram"), (false, "Queue")] {
         let mut group = c.benchmark_group(format!("history add: 1M {}", name));
         #[cfg(feature = "c-tests")]

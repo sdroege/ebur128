@@ -138,7 +138,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
 
         group.finish();
 
-        let mut group = c.benchmark_group(format!("ebur128 process: 48kHz 2ch i16 {}", name));
+        let mut group = c.benchmark_group(format!("ebur128 process: 48kHz i16 2ch {}", name));
 
         #[cfg(feature = "c-tests")]
         {

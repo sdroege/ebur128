@@ -84,16 +84,6 @@ pub fn criterion_benchmark(c: &mut Criterion) {
         ("SAMPLE_PEAK", Mode::SAMPLE_PEAK, ModeC::SAMPLE_PEAK),
         ("TRUE_PEAK", Mode::TRUE_PEAK, ModeC::TRUE_PEAK),
         (
-            "M histogram",
-            Mode::M | Mode::HISTOGRAM,
-            ModeC::M | ModeC::HISTOGRAM,
-        ),
-        (
-            "S histogram",
-            Mode::S | Mode::HISTOGRAM,
-            ModeC::S | ModeC::HISTOGRAM,
-        ),
-        (
             "I histogram",
             Mode::I | Mode::HISTOGRAM,
             ModeC::I | ModeC::HISTOGRAM,
@@ -102,16 +92,6 @@ pub fn criterion_benchmark(c: &mut Criterion) {
             "LRA histogram",
             Mode::LRA | Mode::HISTOGRAM,
             ModeC::LRA | ModeC::HISTOGRAM,
-        ),
-        (
-            "SAMPLE_PEAK histogram",
-            Mode::SAMPLE_PEAK | Mode::HISTOGRAM,
-            ModeC::SAMPLE_PEAK | ModeC::HISTOGRAM,
-        ),
-        (
-            "TRUE_PEAK histogram",
-            Mode::TRUE_PEAK | Mode::HISTOGRAM,
-            ModeC::TRUE_PEAK | ModeC::HISTOGRAM,
         ),
         (
             "all",

@@ -30,6 +30,27 @@ hound = "3"
 internal-tests = []
 c-tests = ["cc", "internal-tests"] # and ebur128-c, quickcheck, quickcheck_macros, rand but dev-dependencies can't be optional...
 reference-tests = []
+capi = []
+
+[lib]
+name = "ebur128"
+
+[package.metadata.capi]
+min_version = "0.6.12"
+
+[package.metadata.capi.header]
+name = "ebur128.h"
+subdirectory = false
+generation = false
+
+[package.metadata.capi.pkg_config]
+name = "libebur128"
+description = "some description"
+version = "1.2.4"
+
+[package.metadata.capi.library]
+name = "ebur128"
+version = "1.2.4"
 
 [[bench]]
 name = "interp"

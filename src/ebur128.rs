@@ -429,6 +429,16 @@ impl EbuR128 {
         &*self.channel_map
     }
 
+    /// Get the configured maximum window duration in ms.
+    pub fn max_window(&self) -> usize {
+        self.window
+    }
+
+    /// Get the configured maximum history in ms.
+    pub fn max_history(&self) -> usize {
+        self.history
+    }
+
     /// Set channel type.
     ///
     /// The default is:
@@ -715,6 +725,24 @@ impl EbuR128 {
         Ok(self.block_energy_history.gated_loudness())
     }
 
+    /// Get global integrated loudness in LUFS across multiple instances.
+    pub fn loudness_global_multiple<'a>(
+        iter: impl Iterator<Item = &'a Self>,
+    ) -> Result<f64, Error> {
+        let h = iter
+            .into_iter()
+            .map(|e| {
+                if !e.mode.contains(Mode::I) {
+                    Err(Error::InvalidMode)
+                } else {
+                    Ok(&e.block_energy_history)
+                }
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+
+        Ok(crate::history::History::gated_loudness_multiple(&*h))
+    }
+
     fn energy_in_interval(&self, interval_frames: usize) -> Result<f64, Error> {
         if interval_frames > self.audio_data.len() / self.channels as usize {
             return Err(Error::InvalidMode);
@@ -782,6 +810,26 @@ impl EbuR128 {
         }
 
         Ok(self.short_term_block_energy_history.loudness_range())
+    }
+
+    /// Get loudness range (LRA) of programme in LU across multiple instances.
+    ///
+    /// Calculates loudness range according to EBU 3342.
+    pub fn loudness_range_multiple<'a>(
+        iter: impl IntoIterator<Item = &'a Self>,
+    ) -> Result<f64, Error> {
+        let h = iter
+            .into_iter()
+            .map(|e| {
+                if !e.mode.contains(Mode::LRA) {
+                    Err(Error::InvalidMode)
+                } else {
+                    Ok(&e.short_term_block_energy_history)
+                }
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+
+        crate::history::History::loudness_range_multiple(&*h).map_err(|_| Error::InvalidMode)
     }
 
     /// Get maximum sample peak from all frames that have been processed.

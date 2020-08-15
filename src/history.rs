@@ -101,11 +101,11 @@ impl Histogram {
         (above_thresh_counter, relative_threshold)
     }
 
-    fn loudness_range(&self) -> f64 {
+    fn loudness_range(h: &[u64; 1000]) -> f64 {
         let mut size = 0;
         let mut power = 0.0;
 
-        for (count, energy) in self.0.iter().zip(histogram_energies().iter()) {
+        for (count, energy) in h.iter().zip(histogram_energies().iter()) {
             size += *count;
             power += *count as f64 * *energy;
         }
@@ -128,7 +128,7 @@ impl Histogram {
                 index
             }
         };
-        let size = self.0[index..].iter().sum::<u64>();
+        let size = h[index..].iter().sum::<u64>();
         if size == 0 {
             return 0.0;
         }
@@ -140,13 +140,13 @@ impl Histogram {
         let mut j = index;
         let mut size = 0;
         while size <= percentile_low {
-            size += self.0[j];
+            size += h[j];
             j += 1;
         }
         let l_en = histogram_energies()[j - 1];
 
         while size <= percentile_high {
-            size += self.0[j];
+            size += h[j];
             j += 1;
         }
         let h_en = histogram_energies()[j - 1];
@@ -191,33 +191,26 @@ impl Queue {
         (self.queue.len() as u64, self.queue.iter().sum::<f64>())
     }
 
-    fn loudness_range(&self) -> f64 {
-        if self.queue.is_empty() {
+    fn loudness_range(q: &[f64]) -> f64 {
+        if q.is_empty() {
             return 0.0;
         }
 
-        let (v1, v2) = self.queue.as_slices();
-        let mut vec = Vec::with_capacity(self.queue.len());
-        vec.extend_from_slice(v1);
-        vec.extend_from_slice(v2);
-
-        vec.sort_unstable_by(|a, b| a.partial_cmp(b).unwrap());
-
-        let power = vec.iter().sum::<f64>() / vec.len() as f64;
+        let power = q.iter().sum::<f64>() / q.len() as f64;
         let minus_twenty_decibels = f64::powf(10.0, -20.0 / 10.0);
         let integrated = minus_twenty_decibels * power;
 
         // TODO: Use iterators here or otherwise get rid of bounds checks
         let mut relgated = 0;
-        let mut relgated_size = vec.len();
-        while relgated_size > 0 && vec[relgated] < integrated {
+        let mut relgated_size = q.len();
+        while relgated_size > 0 && q[relgated] < integrated {
             relgated += 1;
             relgated_size -= 1;
         }
 
         if relgated_size > 0 {
-            let h_en = vec[relgated + ((relgated_size - 1) as f64 * 0.95 + 0.5) as usize];
-            let l_en = vec[relgated + ((relgated_size - 1) as f64 * 0.1 + 0.5) as usize];
+            let h_en = q[relgated + ((relgated_size - 1) as f64 * 0.95 + 0.5) as usize];
+            let l_en = q[relgated + ((relgated_size - 1) as f64 * 0.1 + 0.5) as usize];
 
             energy_to_loudness(h_en) - energy_to_loudness(l_en)
         } else {
@@ -277,7 +270,17 @@ impl History {
     }
 
     pub fn gated_loudness(&self) -> f64 {
-        let (above_thresh_counter, relative_threshold) = self.calc_relative_threshold();
+        Self::gated_loudness_multiple(&[self])
+    }
+
+    pub fn gated_loudness_multiple(s: &[&Self]) -> f64 {
+        let (above_thresh_counter, relative_threshold) = s.iter().fold((0, 0.0), |mut acc, h| {
+            let (above_thresh_counter, relative_threshold) = h.calc_relative_threshold();
+            acc.0 += above_thresh_counter;
+            acc.1 += relative_threshold;
+
+            acc
+        });
 
         if above_thresh_counter == 0 {
             return std::f64::MIN;
@@ -288,45 +291,41 @@ impl History {
         let relative_threshold =
             (relative_threshold / above_thresh_counter as f64) * relative_gate_factor;
 
-        let (above_thresh_counter, gated_loudness) = match self {
-            History::Histogram(ref h) => {
-                let start_index = if relative_threshold < histogram_energy_boundaries()[0] {
-                    0
-                } else {
-                    let start_index = find_histogram_index(relative_threshold);
-                    if relative_threshold > histogram_energies()[start_index] {
-                        start_index + 1
-                    } else {
-                        start_index
-                    }
-                };
+        let mut above_thresh_counter = 0;
+        let mut gated_loudness = 0.0;
 
-                let mut above_thresh_counter = 0;
-                let mut gated_loudness = 0.0;
-                for (count, energy) in h.0[start_index..]
-                    .iter()
-                    .zip(histogram_energies()[start_index..].iter())
-                {
-                    gated_loudness += *count as f64 * *energy;
-                    above_thresh_counter += *count;
-                }
-
-                (above_thresh_counter, gated_loudness)
-            }
-            History::Queue(ref q) => {
-                let mut above_thresh_counter = 0;
-                let mut gated_loudness = 0.0;
-
-                for v in q.queue.iter() {
-                    if *v >= relative_threshold {
-                        above_thresh_counter += 1;
-                        gated_loudness += *v;
-                    }
-                }
-
-                (above_thresh_counter, gated_loudness)
+        let start_index = if relative_threshold < histogram_energy_boundaries()[0] {
+            0
+        } else {
+            let start_index = find_histogram_index(relative_threshold);
+            if relative_threshold > histogram_energies()[start_index] {
+                start_index + 1
+            } else {
+                start_index
             }
         };
+
+        for h in s {
+            match h {
+                History::Histogram(ref h) => {
+                    for (count, energy) in h.0[start_index..]
+                        .iter()
+                        .zip(histogram_energies()[start_index..].iter())
+                    {
+                        gated_loudness += *count as f64 * *energy;
+                        above_thresh_counter += *count;
+                    }
+                }
+                History::Queue(ref q) => {
+                    for v in q.queue.iter() {
+                        if *v >= relative_threshold {
+                            above_thresh_counter += 1;
+                            gated_loudness += *v;
+                        }
+                    }
+                }
+            }
+        }
 
         if above_thresh_counter == 0 {
             return std::f64::MIN;
@@ -351,9 +350,68 @@ impl History {
     }
 
     pub fn loudness_range(&self) -> f64 {
-        match self {
-            History::Histogram(ref h) => h.loudness_range(),
-            History::Queue(ref q) => q.loudness_range(),
+        // This can only fail if multiple histories are passed
+        // and have a mix of histograms and queues
+        Self::loudness_range_multiple(&[self]).unwrap()
+    }
+
+    pub fn loudness_range_multiple(s: &[&Self]) -> Result<f64, ()> {
+        if s.is_empty() {
+            return Ok(0.0);
+        }
+
+        match s[0] {
+            History::Histogram(ref h) => {
+                let mut combined;
+
+                let combined = if s.len() == 1 {
+                    &*h.0
+                } else {
+                    combined = [0; 1000];
+
+                    for h in s {
+                        match h {
+                            History::Histogram(ref h) => {
+                                for (i, o) in h.0.iter().zip(combined.iter_mut()) {
+                                    *o += *i;
+                                }
+                            }
+                            _ => return Err(()),
+                        }
+                    }
+
+                    &combined
+                };
+
+                Ok(Histogram::loudness_range(combined))
+            }
+            History::Queue(_) => {
+                let mut len = 0;
+                for h in s {
+                    match h {
+                        History::Queue(ref q) => {
+                            len += q.queue.len();
+                        }
+                        _ => return Err(()),
+                    }
+                }
+
+                let mut combined = Vec::with_capacity(len);
+                for h in s {
+                    match h {
+                        History::Queue(ref q) => {
+                            let (v1, v2) = q.queue.as_slices();
+                            combined.extend_from_slice(v1);
+                            combined.extend_from_slice(v2);
+                        }
+                        _ => return Err(()),
+                    }
+                }
+
+                combined.sort_unstable_by(|a, b| a.partial_cmp(b).unwrap());
+
+                Ok(Queue::loudness_range(&*combined))
+            }
         }
     }
 }

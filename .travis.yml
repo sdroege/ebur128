@@ -3,10 +3,19 @@ rust:
   - stable
   - beta
   - nightly
+addons:
+  apt:
+    packages:
+      - valgrind
 script:
   - wget https://tech.ebu.ch/files/live/sites/tech/files/shared/testmaterial/ebu-loudness-test-setv05.zip
   - unzip -u ebu-loudness-test-setv05.zip -d tests/reference_files
   - QUICKCHECK_TESTS=2 cargo test --features c-tests,internal-tests,reference-tests
+  - cargo clean
+  - cargo install cargo-c
+  - cargo cinstall --prefix=`pwd`/install
+  - PKG_CONFIG_PATH=`pwd`/install/lib/pkgconfig make -C capi-test check
+  - PKG_CONFIG_PATH=`pwd`/install/lib/pkgconfig make -C capi-test check-valgrind
 matrix:
   allow_failures:
     - rust: nightly

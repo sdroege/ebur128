@@ -57,6 +57,9 @@ pub mod filter;
 #[cfg(not(feature = "internal-tests"))]
 pub(crate) mod filter;
 
+#[cfg(feature = "capi")]
+pub mod capi;
+
 pub(crate) fn energy_to_loudness(energy: f64) -> f64 {
     // The non-test version is faster and more accurate but gives
     // slightly different results than the C version and fails the

@@ -5,17 +5,6 @@
 //  - https://tech.ebu.ch/docs/tech/tech3341.pdf
 //  - https://tech.ebu.ch/docs/tech/tech3342.pdf
 
-macro_rules! assert_eq_f64_01(
-    ($a:expr, $b:expr) => {
-        assert!(
-            float_cmp::approx_eq!(f64, $a, $b, epsilon = 0.1),
-            "{} != {}",
-            $a,
-            $b,
-        )
-    }
-);
-
 macro_rules! read_samples {
     ($reader:expr, 16) => {
         $reader
@@ -73,7 +62,7 @@ macro_rules! test_global_loudness(
 
             add_samples!(e, samples, $bpp);
 
-            assert_eq_f64_01!(e.loudness_global().expect("Failed to get global loudness"), $expected_loudness);
+            float_eq::assert_float_eq!(e.loudness_global().expect("Failed to get global loudness"), $expected_loudness, abs <= 0.1);
         }
 
         {
@@ -81,7 +70,7 @@ macro_rules! test_global_loudness(
 
             add_samples!(e, samples, $bpp);
 
-            assert_eq_f64_01!(e.loudness_global().expect("Failed to get global loudness"), $expected_loudness);
+            float_eq::assert_float_eq!(e.loudness_global().expect("Failed to get global loudness"), $expected_loudness, abs <= 0.1);
         }
     };
 );
@@ -118,12 +107,7 @@ macro_rules! test_loudness_range(
             add_samples!(e, samples, $bpp);
 
             let loudness_range = e.loudness_range().expect("Failed to get loudness range");
-            assert!(
-                float_cmp::approx_eq!(f64, loudness_range, $expected_loudness_range, epsilon = 1.0),
-                "{} != {}",
-                loudness_range,
-                $expected_loudness_range,
-            );
+            float_eq::assert_float_eq!(loudness_range, $expected_loudness_range, abs <= 1.0, "queue mode");
         }
 
         {
@@ -132,12 +116,7 @@ macro_rules! test_loudness_range(
             add_samples!(e, samples, $bpp);
 
             let loudness_range = e.loudness_range().expect("Failed to get loudness range in histogram mode");
-            assert!(
-                float_cmp::approx_eq!(f64, loudness_range, $expected_loudness_range, epsilon = 1.0),
-                "{} != {} (histogram mode)",
-                loudness_range,
-                $expected_loudness_range,
-            );
+            float_eq::assert_float_eq!(loudness_range, $expected_loudness_range, abs <= 1.0, "histogram mode");
         }
     };
 );
@@ -169,10 +148,11 @@ fn seq_3341_1() {
 
             // Constant after 3s
             if i >= 29 {
-                assert_eq_f64_01!(
+                float_eq::assert_float_eq!(
                     e.loudness_shortterm()
                         .expect("Failed to get shortterm loudness"),
-                    -23.0
+                    -23.0,
+                    abs <= 0.1
                 );
             }
         }
@@ -193,10 +173,11 @@ fn seq_3341_1() {
 
             // Constant after 1s
             if i >= 10 {
-                assert_eq_f64_01!(
+                float_eq::assert_float_eq!(
                     e.loudness_momentary()
                         .expect("Failed to get momentary loudness"),
-                    -23.0
+                    -23.0,
+                    abs <= 0.1
                 );
             }
         }
@@ -228,10 +209,11 @@ fn seq_3341_2() {
 
             // Constant after 3s
             if i >= 29 {
-                assert_eq_f64_01!(
+                float_eq::assert_float_eq!(
                     e.loudness_shortterm()
                         .expect("Failed to get shortterm loudness"),
-                    -33.0
+                    -33.0,
+                    abs <= 0.1
                 );
             }
         }
@@ -252,10 +234,11 @@ fn seq_3341_2() {
 
             // Constant after 1s
             if i >= 10 {
-                assert_eq_f64_01!(
+                float_eq::assert_float_eq!(
                     e.loudness_momentary()
                         .expect("Failed to get momentary loudness"),
-                    -33.0
+                    -33.0,
+                    abs <= 0.1
                 );
             }
         }
@@ -368,10 +351,11 @@ fn seq_3341_9() {
 
         // Constant after 3s
         if i >= 29 {
-            assert_eq_f64_01!(
+            float_eq::assert_float_eq!(
                 e.loudness_shortterm()
                     .expect("Failed to get shortterm loudness"),
-                -23.0
+                -23.0,
+                abs <= 0.1
             );
         }
     }
@@ -401,13 +385,7 @@ fn seq_3341_10() {
             }
         }
 
-        assert!(
-            float_cmp::approx_eq!(f64, max_loudness, -23.0, epsilon = 0.1),
-            "{}: {} != {}",
-            i,
-            max_loudness,
-            -23.0,
-        );
+        float_eq::assert_float_eq!(max_loudness, -23.0, abs <= 0.1, "file {}", i);
     }
 }
 
@@ -435,12 +413,12 @@ fn seq_3341_11() {
         }
         if (i + 1) % 60 == 0 {
             let expected = -38.0 + ((i + 1) / 60 - 1) as f64;
-            assert!(
-                float_cmp::approx_eq!(f64, max_loudness, expected, epsilon = 0.1),
-                "{}: {} != {}",
-                (i + 1) / 60 - 1,
+            float_eq::assert_float_eq!(
                 max_loudness,
                 expected,
+                abs <= 0.1,
+                "chunk {}",
+                (i + 1) / 60 - 1
             );
         }
     }
@@ -462,10 +440,11 @@ fn seq_3341_12() {
 
         // Constant after 1s
         if i >= 10 {
-            assert_eq_f64_01!(
+            float_eq::assert_float_eq!(
                 e.loudness_momentary()
                     .expect("Failed to get momentary loudness"),
-                -23.0
+                -23.0,
+                abs <= 0.1
             );
         }
     }
@@ -501,13 +480,7 @@ fn seq_3341_13() {
             }
         }
 
-        assert!(
-            float_cmp::approx_eq!(f64, max_loudness, -23.0, epsilon = 0.1),
-            "{}: {} != {}",
-            i,
-            max_loudness,
-            -23.0,
-        );
+        float_eq::assert_float_eq!(max_loudness, -23.0, abs <= 0.1, "file {}", i);
     }
 }
 
@@ -537,12 +510,12 @@ fn seq_3341_14() {
         }
         if (i + 1) % 8 == 0 {
             let expected = -38.0 + ((i + 1) / 8 - 1) as f64;
-            assert!(
-                float_cmp::approx_eq!(f64, max_loudness, expected, epsilon = 0.1),
-                "{}: {} != {}",
-                (i + 1) / 8 - 1,
+            float_eq::assert_float_eq!(
                 max_loudness,
                 expected,
+                abs <= 0.1,
+                "chunk {}",
+                (i + 1) / 8 - 1
             );
         }
     }

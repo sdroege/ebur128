@@ -172,12 +172,11 @@ extern "C" {
 mod tests {
     use super::*;
     use crate::tests::Signal;
+    use float_eq::assert_float_eq;
     use quickcheck_macros::quickcheck;
 
     #[quickcheck]
     fn compare_c_impl_i16(signal: Signal<i16>) -> quickcheck::TestResult {
-        use float_cmp::approx_eq;
-
         if signal.rate >= 192_000 {
             return quickcheck::TestResult::discard();
         }
@@ -206,12 +205,12 @@ mod tests {
         }
 
         for (i, (r, c)) in peaks.iter().zip(peaks_c.iter()).enumerate() {
-            assert!(
-                approx_eq!(f64, *r, *c, ulps = 2),
-                "Rust and C implementation differ at channel {}: {} != {}",
+            assert_float_eq!(
+                *r,
+                *c,
+                ulps <= 2,
+                "Rust and C implementation differ at channel {}",
                 i,
-                r,
-                c
             );
         }
 
@@ -220,8 +219,6 @@ mod tests {
 
     #[quickcheck]
     fn compare_c_impl_i32(signal: Signal<i32>) -> quickcheck::TestResult {
-        use float_cmp::approx_eq;
-
         if signal.rate >= 192_000 {
             return quickcheck::TestResult::discard();
         }
@@ -250,12 +247,12 @@ mod tests {
         }
 
         for (i, (r, c)) in peaks.iter().zip(peaks_c.iter()).enumerate() {
-            assert!(
-                approx_eq!(f64, *r, *c, ulps = 2),
-                "Rust and C implementation differ at channel {}: {} != {}",
-                i,
-                r,
-                c
+            assert_float_eq!(
+                *r,
+                *c,
+                ulps <= 2,
+                "Rust and C implementation differ at channel {}",
+                i
             );
         }
 
@@ -264,8 +261,6 @@ mod tests {
 
     #[quickcheck]
     fn compare_c_impl_f32(signal: Signal<f32>) -> quickcheck::TestResult {
-        use float_cmp::approx_eq;
-
         if signal.rate >= 192_000 {
             return quickcheck::TestResult::discard();
         }
@@ -294,12 +289,12 @@ mod tests {
         }
 
         for (i, (r, c)) in peaks.iter().zip(peaks_c.iter()).enumerate() {
-            assert!(
-                approx_eq!(f64, *r, *c, ulps = 2),
-                "Rust and C implementation differ at channel {}: {} != {}",
-                i,
-                r,
-                c
+            assert_float_eq!(
+                *r,
+                *c,
+                ulps <= 2,
+                "Rust and C implementation differ at channel {}",
+                i
             );
         }
 
@@ -308,8 +303,6 @@ mod tests {
 
     #[quickcheck]
     fn compare_c_impl_f64(signal: Signal<f64>) -> quickcheck::TestResult {
-        use float_cmp::approx_eq;
-
         if signal.rate >= 192_000 {
             return quickcheck::TestResult::discard();
         }
@@ -338,12 +331,12 @@ mod tests {
         }
 
         for (i, (r, c)) in peaks.iter().zip(peaks_c.iter()).enumerate() {
-            assert!(
-                approx_eq!(f64, *r, *c, ulps = 2),
-                "Rust and C implementation differ at channel {}: {} != {}",
-                i,
-                r,
-                c
+            assert_float_eq!(
+                *r,
+                *c,
+                ulps <= 2,
+                "Rust and C implementation differ at channel {}",
+                i
             );
         }
 

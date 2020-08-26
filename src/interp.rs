@@ -177,12 +177,11 @@ extern "C" {
 mod tests {
     use super::*;
     use crate::tests::Signal;
+    use float_eq::assert_float_eq;
     use quickcheck_macros::quickcheck;
 
     #[quickcheck]
     fn compare_c_impl(signal: Signal<f32>) -> quickcheck::TestResult {
-        use float_cmp::approx_eq;
-
         let frames = signal.data.len() / signal.channels as usize;
         let factor = if signal.rate < 96_000 {
             4
@@ -228,12 +227,12 @@ mod tests {
         }
 
         for (i, (r, c)) in data_out.iter().zip(data_out_c.iter()).enumerate() {
-            assert!(
-                approx_eq!(f32, *r, *c, ulps = 2),
-                "Rust and C implementation differ at sample {}: {} != {}",
-                i,
-                r,
-                c
+            assert_float_eq!(
+                *r,
+                *c,
+                ulps <= 2,
+                "Rust and C implementation differ at sample {}",
+                i
             );
         }
 

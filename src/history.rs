@@ -442,7 +442,7 @@ extern "C" {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use float_cmp::approx_eq;
+    use float_eq::float_eq;
     use quickcheck_macros::quickcheck;
     use std::num::NonZeroU16;
 
@@ -491,7 +491,7 @@ mod tests {
             val
         };
 
-        if !approx_eq!(f64, val, val_c, ulps = 2) {
+        if !float_eq!(val, val_c, ulps <= 2) {
             Err(format!("{} != {}", val, val_c))
         } else {
             Ok(())
@@ -524,7 +524,7 @@ mod tests {
             val
         };
 
-        if !approx_eq!(f64, val, val_c, ulps = 2) {
+        if !float_eq!(val, val_c, ulps <= 2) {
             Err(format!("{} != {}", val, val_c))
         } else {
             Ok(())
@@ -557,7 +557,7 @@ mod tests {
             val
         };
 
-        if !approx_eq!(f64, val, val_c, ulps = 2) {
+        if !float_eq!(val, val_c, ulps <= 2) {
             Err(format!("{} != {}", val, val_c))
         } else {
             Ok(())

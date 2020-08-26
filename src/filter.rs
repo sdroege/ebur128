@@ -349,7 +349,7 @@ extern "C" {
 mod tests {
     use super::*;
     use crate::tests::Signal;
-    use float_cmp::approx_eq;
+    use float_eq::assert_float_eq;
     use quickcheck_macros::quickcheck;
 
     fn compare_results(
@@ -364,35 +364,35 @@ mod tests {
     ) {
         if calculate_sample_peak {
             for (i, (r, c)) in sp.iter().zip(sp_c.iter()).enumerate() {
-                assert!(
-                    approx_eq!(f64, *r, *c, ulps = 2),
-                    "Rust and C implementation differ at sample peak {}: {} != {}",
-                    i,
-                    r,
-                    c
+                assert_float_eq!(
+                    *r,
+                    *c,
+                    ulps <= 2,
+                    "Rust and C implementation differ at sample peak {}",
+                    i
                 );
             }
         }
 
         if calculate_true_peak {
             for (i, (r, c)) in tp.iter().zip(tp_c.iter()).enumerate() {
-                assert!(
-                    approx_eq!(f64, *r, *c, ulps = 2),
-                    "Rust and C implementation differ at true peak {}: {} != {}",
-                    i,
-                    r,
-                    c
+                assert_float_eq!(
+                    *r,
+                    *c,
+                    ulps <= 2,
+                    "Rust and C implementation differ at true peak {}",
+                    i
                 );
             }
         }
 
         for (i, (r, c)) in data_out.iter().zip(data_out_c.iter()).enumerate() {
-            assert!(
-                approx_eq!(f64, *r, *c, ulps = 2),
-                "Rust and C implementation differ at sample {}: {} != {}",
-                i,
-                r,
-                c
+            assert_float_eq!(
+                *r,
+                *c,
+                ulps <= 2,
+                "Rust and C implementation differ at sample {}",
+                i
             );
         }
     }

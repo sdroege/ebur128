@@ -8,7 +8,7 @@ fn calc_gating_block_c(
     channel_map: &[u32],
 ) -> f64 {
     unsafe {
-        ebur128::calc_gating_block_c(
+        ebur128::filter::calc_gating_block_c(
             frames_per_block,
             audio_data.as_ptr(),
             audio_data.len() / channel_map.len(),
@@ -26,7 +26,12 @@ fn calc_gating_block(
     audio_data_index: usize,
     channel_map: &[ebur128::Channel],
 ) -> f64 {
-    ebur128::calc_gating_block_internal(frames_per_block, audio_data, audio_data_index, channel_map)
+    ebur128::filter::Filter::calc_gating_block(
+        frames_per_block,
+        audio_data,
+        audio_data_index,
+        channel_map,
+    )
 }
 
 pub fn criterion_benchmark(c: &mut Criterion) {

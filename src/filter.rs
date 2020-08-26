@@ -21,6 +21,8 @@
 
 use std::fmt;
 
+use crate::ebur128::Channel;
+
 pub struct Filter {
     channels: u32,
     // BS.1770 filter coefficients (nominator).
@@ -222,6 +224,71 @@ impl Filter {
             }
         }
     }
+
+    pub fn calc_gating_block(
+        frames_per_block: usize,
+        audio_data: &[f64],
+        audio_data_index: usize,
+        channel_map: &[Channel],
+    ) -> f64 {
+        let mut sum = 0.0;
+
+        let channels = channel_map.len();
+        assert!(audio_data_index <= audio_data.len());
+        assert!(audio_data.len() % channels == 0);
+        assert!(audio_data_index % channels == 0);
+
+        for (c, channel) in channel_map.iter().enumerate() {
+            if *channel == Channel::Unused {
+                continue;
+            }
+
+            let mut channel_sum = 0.0;
+
+            // XXX: Don't use channel_sum += sum() here because that gives slightly different
+            // results than the C version because of rounding errors
+            if audio_data_index < frames_per_block * channels {
+                for frame in audio_data[..audio_data_index].chunks_exact(channels) {
+                    channel_sum += frame[c] * frame[c];
+                }
+
+                for frame in audio_data
+                    [(audio_data.len() - frames_per_block * channels + audio_data_index)..]
+                    .chunks_exact(channels)
+                {
+                    channel_sum += frame[c] * frame[c];
+                }
+            } else {
+                for frame in audio_data
+                    [(audio_data_index - frames_per_block * channels)..audio_data_index]
+                    .chunks_exact(channels)
+                {
+                    channel_sum += frame[c] * frame[c];
+                }
+            }
+
+            match channel {
+                Channel::LeftSurround
+                | Channel::RightSurround
+                | Channel::Mp060
+                | Channel::Mm060
+                | Channel::Mp090
+                | Channel::Mm090 => {
+                    channel_sum *= 1.41;
+                }
+                Channel::DualMono => {
+                    channel_sum *= 2.0;
+                }
+                _ => (),
+            }
+
+            sum += channel_sum;
+        }
+
+        sum /= frames_per_block as f64;
+
+        sum
+    }
 }
 
 pub trait AsF64: crate::true_peak::AsF32 + Copy + PartialOrd {
@@ -342,6 +409,15 @@ extern "C" {
         channel_map: *const u32,
     );
     pub fn filter_destroy_c(filter: *mut c_void);
+
+    pub fn calc_gating_block_c(
+        frames_per_block: usize,
+        audio_data: *const f64,
+        audio_data_frames: usize,
+        audio_data_index: usize,
+        channel_map: *const u32,
+        channels: usize,
+    ) -> f64;
 }
 
 #[cfg(feature = "c-tests")]
@@ -412,7 +488,7 @@ mod tests {
         let mut data_out_c = vec![0.0f64; frames * signal.channels as usize];
 
         let channel_map_c = vec![1; signal.channels as usize];
-        let channel_map = vec![crate::ebur128::Channel::Left; signal.channels as usize];
+        let channel_map = vec![Channel::Left; signal.channels as usize];
 
         let (sp, tp) = {
             let mut f = Filter::new(
@@ -486,7 +562,7 @@ mod tests {
         let mut data_out_c = vec![0.0f64; frames * signal.channels as usize];
 
         let channel_map_c = vec![1; signal.channels as usize];
-        let channel_map = vec![crate::ebur128::Channel::Left; signal.channels as usize];
+        let channel_map = vec![Channel::Left; signal.channels as usize];
 
         let (sp, tp) = {
             let mut f = Filter::new(
@@ -560,7 +636,7 @@ mod tests {
         let mut data_out_c = vec![0.0f64; frames * signal.channels as usize];
 
         let channel_map_c = vec![1; signal.channels as usize];
-        let channel_map = vec![crate::ebur128::Channel::Left; signal.channels as usize];
+        let channel_map = vec![Channel::Left; signal.channels as usize];
 
         let (sp, tp) = {
             let mut f = Filter::new(
@@ -634,7 +710,7 @@ mod tests {
         let mut data_out_c = vec![0.0f64; frames * signal.channels as usize];
 
         let channel_map_c = vec![1; signal.channels as usize];
-        let channel_map = vec![crate::ebur128::Channel::Left; signal.channels as usize];
+        let channel_map = vec![Channel::Left; signal.channels as usize];
 
         let (sp, tp) = {
             let mut f = Filter::new(
@@ -691,5 +767,91 @@ mod tests {
             &data_out,
             &data_out_c,
         );
+    }
+
+    #[derive(Clone, Debug)]
+    struct GatingBlock {
+        frames_per_block: usize,
+        audio_data: Vec<f64>,
+        audio_data_index: usize,
+        channels: u32,
+    }
+
+    impl quickcheck::Arbitrary for GatingBlock {
+        fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+            use rand::Rng;
+
+            let channels = g.gen_range(1, 16);
+
+            let rate = 48_000;
+
+            let samples_in_100ms = (rate + 5) / 10;
+            let (frames_per_block, window) = if g.gen() {
+                (4 * samples_in_100ms, 400)
+            } else {
+                (30 * samples_in_100ms, 3000)
+            };
+
+            let mut audio_data_frames = rate * window / 1000;
+            if audio_data_frames % samples_in_100ms != 0 {
+                // round up to multiple of samples_in_100ms
+                audio_data_frames =
+                    (audio_data_frames + samples_in_100ms) - (audio_data_frames % samples_in_100ms);
+            }
+
+            let mut audio_data = vec![0.0; audio_data_frames * channels as usize];
+            for v in &mut audio_data {
+                *v = g.gen_range(-1.0, 1.0);
+            }
+
+            let audio_data_index = g.gen_range(0, audio_data_frames) * channels as usize;
+
+            GatingBlock {
+                frames_per_block,
+                audio_data,
+                audio_data_index,
+                channels,
+            }
+        }
+    }
+
+    fn default_channel_map_c(channels: u32) -> Vec<u32> {
+        match channels {
+            4 => vec![1, 2, 4, 5],
+            5 => vec![1, 2, 3, 4, 5],
+            _ => {
+                let mut v = vec![0; channels as usize];
+
+                let set_channels = std::cmp::min(channels as usize, 6);
+                v[0..set_channels].copy_from_slice(&[1, 2, 3, 0, 4, 5][..set_channels]);
+
+                v
+            }
+        }
+    }
+
+    #[quickcheck]
+    fn compare_c_impl_calc_gating_block(block: GatingBlock) {
+        let channel_map = crate::ebur128::default_channel_map(block.channels);
+        let channel_map_c = default_channel_map_c(block.channels);
+
+        let energy = Filter::calc_gating_block(
+            block.frames_per_block,
+            &block.audio_data,
+            block.audio_data_index,
+            &channel_map,
+        );
+        let energy_c = unsafe {
+            calc_gating_block_c(
+                block.frames_per_block,
+                block.audio_data.as_ptr(),
+                block.audio_data.len() / block.channels as usize,
+                block.audio_data_index,
+                channel_map_c.as_ptr(),
+                block.channels as usize,
+            )
+        };
+
+        assert_float_eq!(energy, energy_c, ulps <= 2);
     }
 }

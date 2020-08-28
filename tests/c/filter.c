@@ -25,7 +25,7 @@ typedef struct {
   unsigned int rate;
   unsigned int channels;
 
-  /** BS.1770 filter coefficients (nominator). */
+  /** BS.1770 filter coefficients (numerator). */
   double b[5];
   /** BS.1770 filter coefficients (denominator). */
   double a[5];

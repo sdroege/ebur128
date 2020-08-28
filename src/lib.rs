@@ -29,8 +29,8 @@
 //!  can then be used to normalize volume during playback.
 //!
 //!  Features:
-//!   * Implements M, S and I modes
-//!   * Implements loudness range measurement (EBU - TECH 3342)
+//!   * Implements M, S and I modes ([EBU - TECH 3341](https://tech.ebu.ch/docs/tech/tech3341.pdf))
+//!   * Implements loudness range measurement ([EBU - TECH 3342](https://tech.ebu.ch/docs/tech/tech3342.pdf))
 //!   * True peak scanning
 //!   * Supports all samplerates by recalculation of the filter coefficients
 

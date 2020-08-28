@@ -684,7 +684,7 @@ impl EbuR128 {
         let energy = self.energy_in_interval(self.samples_in_100ms * 4)?;
 
         if energy <= 0.0 {
-            return Ok(f64::MIN);
+            return Ok(-f64::INFINITY);
         }
 
         Ok(energy_to_loudness(energy))
@@ -699,7 +699,7 @@ impl EbuR128 {
         let energy = self.energy_shortterm()?;
 
         if energy <= 0.0 {
-            return Ok(f64::MIN);
+            return Ok(-f64::INFINITY);
         }
 
         Ok(energy_to_loudness(energy))
@@ -718,7 +718,7 @@ impl EbuR128 {
         let energy = self.energy_in_interval(interval_frames)?;
 
         if energy <= 0.0 {
-            return Ok(f64::MIN);
+            return Ok(-f64::INFINITY);
         }
 
         Ok(energy_to_loudness(energy))

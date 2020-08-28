@@ -654,7 +654,6 @@ impl EbuR128 {
         iter: impl Iterator<Item = &'a Self>,
     ) -> Result<f64, Error> {
         let h = iter
-            .into_iter()
             .map(|e| {
                 if !e.mode.contains(Mode::I) {
                     Err(Error::InvalidMode)

@@ -25,7 +25,7 @@ use crate::ebur128::Channel;
 
 pub struct Filter {
     channels: u32,
-    // BS.1770 filter coefficients (nominator).
+    // BS.1770 filter coefficients (numerator).
     b: [f64; 5],
     // BS.1770 filter coefficients (denominator).
     a: [f64; 5],
@@ -84,7 +84,7 @@ fn filter_coefficients(rate: f64) -> ([f64; 5], [f64; 5]) {
     ra[2] = (1.0 - K / Q + K * K) / (1.0 + K / Q + K * K);
 
     (
-        // Nominator
+        // Numerator
         [
             pb[0] * rb[0],
             pb[0] * rb[1] + pb[1] * rb[0],

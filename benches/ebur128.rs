@@ -1,8 +1,10 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 
 use ebur128::{EbuR128, Mode};
-use ebur128_c::EbuR128 as EbuR128C;
 use ebur128_c::Mode as ModeC;
+
+#[cfg(feature = "c-tests")]
+use ebur128_c::EbuR128 as EbuR128C;
 
 #[cfg(feature = "c-tests")]
 fn get_results_c(ebu: &EbuR128C, mode: ModeC) {

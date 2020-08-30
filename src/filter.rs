@@ -31,17 +31,17 @@ pub struct Filter {
     /// BS.1770 filter coefficients (denominator).
     a: [f64; 5],
     /// One filter state per channel.
-    filter_state: Vec<[f64; 5]>,
+    filter_state: Box<[[f64; 5]]>,
 
     /// Whether to measure sample peak.
     calculate_sample_peak: bool,
     /// Previously measured sample peak.
-    sample_peak: Vec<f64>,
+    sample_peak: Box<[f64]>,
 
     /// True peak measurement if enabled.
     tp: Option<crate::true_peak::TruePeak>,
     /// Previously measured true peak.
-    true_peak: Vec<f64>,
+    true_peak: Box<[f64]>,
 }
 
 impl fmt::Debug for Filter {
@@ -130,20 +130,20 @@ impl Filter {
             channels,
             b,
             a,
-            filter_state: vec![[0.0; 5]; channels as usize],
+            filter_state: vec![[0.0; 5]; channels as usize].into_boxed_slice(),
             calculate_sample_peak,
-            sample_peak: vec![0.0; channels as usize],
+            sample_peak: vec![0.0; channels as usize].into_boxed_slice(),
             tp,
-            true_peak: vec![0.0; channels as usize],
+            true_peak: vec![0.0; channels as usize].into_boxed_slice(),
         }
     }
 
     pub fn reset_peaks(&mut self) {
-        for v in &mut self.sample_peak {
+        for v in &mut *self.sample_peak {
             *v = 0.0;
         }
 
-        for v in &mut self.true_peak {
+        for v in &mut *self.true_peak {
             *v = 0.0;
         }
     }

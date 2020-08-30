@@ -32,9 +32,9 @@ pub struct TruePeak {
     channels: u32,
     /// Input buffer to which to processed data is first copied. This allows for 400ms
     /// samples per channel, non-interleaved/planar.
-    buffer_input: Vec<f32>,
+    buffer_input: Box<[f32]>,
     /// Output buffer for the resampler. This allows for 400ms * resample factor samples.
-    buffer_output: Vec<f32>,
+    buffer_output: Box<[f32]>,
 }
 
 impl TruePeak {
@@ -49,8 +49,9 @@ impl TruePeak {
             return None;
         };
 
-        let buffer_input = vec![0.0; 4 * samples_in_100ms as usize * channels as usize];
-        let buffer_output = vec![0.0; buffer_input.len() * interp_factor];
+        let buffer_input =
+            vec![0.0; 4 * samples_in_100ms as usize * channels as usize].into_boxed_slice();
+        let buffer_output = vec![0.0; buffer_input.len() * interp_factor].into_boxed_slice();
 
         Some(Self {
             interp,

@@ -77,6 +77,8 @@ fn find_histogram_index(energy: f64) -> usize {
     min
 }
 
+/// Histogram of measured energies. See histogram_energy_boundaries() and histogram_energies() for
+/// the bins of the histogram.
 pub struct Histogram(Box<[u64; 1000]>);
 
 impl Histogram {
@@ -155,6 +157,7 @@ impl Histogram {
     }
 }
 
+/// History of measured energies with a configurable maximum size.
 // TODO: Would ideally use a linked-list based queue of fixed-size queues
 // to not require a huge contiguous allocation
 pub struct Queue {
@@ -219,6 +222,7 @@ impl Queue {
     }
 }
 
+/// History of measured energies, either as histogram or a vector.
 pub enum History {
     Queue(Queue),
     Histogram(Histogram),

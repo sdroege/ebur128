@@ -21,12 +21,19 @@
 
 use crate::interp::Interp;
 
+/// True peak measurement.
 #[derive(Debug)]
 pub struct TruePeak {
+    /// Interpolator/resampler.
     interp: Interp,
+    /// Configured sample rate.
     rate: u32,
+    /// Configured number of channels.
     channels: u32,
+    /// Input buffer to which to processed data is first copied. This allows for 400ms
+    /// samples per channel, non-interleaved/planar.
     buffer_input: Vec<f32>,
+    /// Output buffer for the resampler. This allows for 400ms * resample factor samples.
     buffer_output: Vec<f32>,
 }
 
@@ -111,6 +118,7 @@ fn f64_max(a: f64, b: f64) -> f64 {
     }
 }
 
+/// Trait for converting samples into f32 in the range [0,1].
 pub trait AsF32: Copy {
     fn as_f32(self) -> f32;
 }

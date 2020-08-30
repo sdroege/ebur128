@@ -164,7 +164,12 @@ pub unsafe extern "C" fn ebur128_add_frames_short(
     let s = &mut *state;
     let e = &mut *s.internal;
 
-    match e.add_frames_i16(slice::from_raw_parts(src, frames * s.channels as usize)) {
+    let samples = match frames.checked_mul(s.channels as usize) {
+        None => return crate::ebur128::Error::NoMem.into(),
+        Some(samples) => samples,
+    };
+
+    match e.add_frames_i16(slice::from_raw_parts(src, samples)) {
         Err(err) => err.into(),
         Ok(_) => 0,
     }
@@ -181,7 +186,12 @@ pub unsafe extern "C" fn ebur128_add_frames_int(
     let s = &mut *state;
     let e = &mut *s.internal;
 
-    match e.add_frames_i32(slice::from_raw_parts(src, frames * s.channels as usize)) {
+    let samples = match frames.checked_mul(s.channels as usize) {
+        None => return crate::ebur128::Error::NoMem.into(),
+        Some(samples) => samples,
+    };
+
+    match e.add_frames_i32(slice::from_raw_parts(src, samples)) {
         Err(err) => err.into(),
         Ok(_) => 0,
     }
@@ -198,7 +208,12 @@ pub unsafe extern "C" fn ebur128_add_frames_float(
     let s = &mut *state;
     let e = &mut *s.internal;
 
-    match e.add_frames_f32(slice::from_raw_parts(src, frames * s.channels as usize)) {
+    let samples = match frames.checked_mul(s.channels as usize) {
+        None => return crate::ebur128::Error::NoMem.into(),
+        Some(samples) => samples,
+    };
+
+    match e.add_frames_f32(slice::from_raw_parts(src, samples)) {
         Err(err) => err.into(),
         Ok(_) => 0,
     }
@@ -215,7 +230,12 @@ pub unsafe extern "C" fn ebur128_add_frames_double(
     let s = &mut *state;
     let e = &mut *s.internal;
 
-    match e.add_frames_f64(slice::from_raw_parts(src, frames * s.channels as usize)) {
+    let samples = match frames.checked_mul(s.channels as usize) {
+        None => return crate::ebur128::Error::NoMem.into(),
+        Some(samples) => samples,
+    };
+
+    match e.add_frames_f64(slice::from_raw_parts(src, samples)) {
         Err(err) => err.into(),
         Ok(_) => 0,
     }

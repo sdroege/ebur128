@@ -256,7 +256,6 @@ pub(crate) fn default_channel_map(channels: u32) -> Vec<Channel> {
 
 const MAX_RATE: u32 = 2822400;
 const MAX_CHANNELS: u32 = 64;
-const MAX_WINDOW: usize = ((3 as usize) << 30) / MAX_RATE as usize / MAX_CHANNELS as usize / 8;
 
 impl EbuR128 {
     /// Create a new instance with the given configuration.
@@ -283,14 +282,22 @@ impl EbuR128 {
             return Err(Error::InvalidMode);
         };
 
-        let mut audio_data_frames = rate as usize * window / 1000;
+        let mut audio_data_frames = (rate as usize).checked_mul(window).ok_or(Error::NoMem)? / 1000;
         if audio_data_frames % samples_in_100ms != 0 {
             // round up to multiple of samples_in_100ms
-            audio_data_frames =
-                (audio_data_frames + samples_in_100ms) - (audio_data_frames % samples_in_100ms);
+            audio_data_frames = audio_data_frames
+                .checked_add(samples_in_100ms)
+                .ok_or(Error::NoMem)?
+                - (audio_data_frames % samples_in_100ms);
         }
 
-        let audio_data = vec![0.0; audio_data_frames * channels as usize];
+        let audio_data = vec![
+            0.0;
+            audio_data_frames
+                .checked_mul(channels as usize)
+                .ok_or(Error::NoMem)?
+        ];
+
         // start at the beginning of the buffer
         let audio_data_index = 0;
 
@@ -424,6 +431,27 @@ impl EbuR128 {
             return Ok(());
         }
 
+        let samples_in_100ms = (rate as usize + 5) / 10;
+
+        let mut audio_data_frames = (rate as usize)
+            .checked_mul(self.window)
+            .ok_or(Error::NoMem)?
+            / 1000;
+        if audio_data_frames % samples_in_100ms != 0 {
+            // round up to multiple of samples_in_100ms
+            audio_data_frames = audio_data_frames
+                .checked_add(samples_in_100ms)
+                .ok_or(Error::NoMem)?
+                - (audio_data_frames % samples_in_100ms);
+        }
+
+        self.audio_data = vec![
+            0.0;
+            audio_data_frames
+                .checked_mul(channels as usize)
+                .ok_or(Error::NoMem)?
+        ];
+
         if self.channels != channels {
             self.channels = channels;
             self.channel_map = default_channel_map(channels);
@@ -433,7 +461,7 @@ impl EbuR128 {
 
         if self.rate != rate {
             self.rate = rate;
-            self.samples_in_100ms = (rate as usize + 5) / 10;
+            self.samples_in_100ms = samples_in_100ms;
         }
 
         self.filter = crate::filter::Filter::new(
@@ -442,15 +470,6 @@ impl EbuR128 {
             self.mode.contains(Mode::SAMPLE_PEAK),
             self.mode.contains(Mode::TRUE_PEAK),
         );
-
-        let mut audio_data_frames = rate as usize * self.window / 1000;
-        if audio_data_frames % self.samples_in_100ms != 0 {
-            // round up to multiple of samples_in_100ms
-            audio_data_frames = (audio_data_frames + self.samples_in_100ms)
-                - (audio_data_frames % self.samples_in_100ms);
-        }
-
-        self.audio_data = vec![0.0; audio_data_frames * channels as usize];
 
         // the first block needs 400ms of audio data
         self.needed_frames = self.samples_in_100ms * 4;
@@ -480,20 +499,25 @@ impl EbuR128 {
             return Ok(());
         }
 
-        if window as usize >= MAX_WINDOW {
-            return Err(Error::NoMem);
-        }
-
-        self.window = window as usize;
-
-        let mut audio_data_frames = self.rate as usize * self.window / 1000;
+        let mut audio_data_frames = (self.rate as usize)
+            .checked_mul(window)
+            .ok_or(Error::NoMem)?
+            / 1000;
         if audio_data_frames % self.samples_in_100ms != 0 {
             // round up to multiple of samples_in_100ms
-            audio_data_frames = (audio_data_frames + self.samples_in_100ms)
+            audio_data_frames = audio_data_frames
+                .checked_add(self.samples_in_100ms)
+                .ok_or(Error::NoMem)?
                 - (audio_data_frames % self.samples_in_100ms);
         }
 
-        self.audio_data = vec![0.0; audio_data_frames * self.channels as usize];
+        self.audio_data = vec![
+            0.0;
+            audio_data_frames
+                .checked_mul(self.channels as usize)
+                .ok_or(Error::NoMem)?
+        ];
+        self.window = window as usize;
 
         // the first block needs 400ms of audio data
         self.needed_frames = self.samples_in_100ms * 4;
@@ -710,11 +734,10 @@ impl EbuR128 {
     /// window must not be larger than the current window. The current window can be changed by
     /// calling [`EbuR128::set_max_window`](struct.EbuR128.html#method.set_max_window).
     pub fn loudness_window(&self, window: u32) -> Result<f64, Error> {
-        if window as usize >= MAX_WINDOW {
-            return Err(Error::InvalidMode);
-        }
-
-        let interval_frames = self.rate as usize * window as usize / 1000;
+        let interval_frames = (self.rate as usize)
+            .checked_mul(window as usize)
+            .ok_or(Error::InvalidMode)?
+            / 1000;
         let energy = self.energy_in_interval(interval_frames)?;
 
         if energy <= 0.0 {

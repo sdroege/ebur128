@@ -157,7 +157,7 @@ pub struct EbuR128 {
     channels: u32,
 
     /// Filtered audio data (used as ring buffer).
-    audio_data: Vec<f64>,
+    audio_data: Box<[f64]>,
     /// Current index for audio_data.
     audio_data_index: usize,
 
@@ -167,7 +167,7 @@ pub struct EbuR128 {
     needed_frames: usize,
 
     /// The channel map. Has as many elements as there are channels.
-    channel_map: Vec<Channel>,
+    channel_map: Box<[Channel]>,
 
     /// How many samples fit in 100ms (rounded).
     samples_in_100ms: usize,
@@ -183,10 +183,10 @@ pub struct EbuR128 {
     short_term_frame_counter: usize,
 
     /// Maximum sample peak, one per channel.
-    sample_peak: Vec<f64>,
+    sample_peak: Box<[f64]>,
 
     /// Maximum true peak, one per channel.
-    true_peak: Vec<f64>,
+    true_peak: Box<[f64]>,
 
     /// The maximum window duration in ms.
     window: usize,
@@ -324,17 +324,17 @@ impl EbuR128 {
             mode,
             rate,
             channels,
-            audio_data,
+            audio_data: audio_data.into_boxed_slice(),
             audio_data_index,
             needed_frames,
-            channel_map,
+            channel_map: channel_map.into_boxed_slice(),
             samples_in_100ms,
             filter,
             block_energy_history,
             short_term_block_energy_history,
             short_term_frame_counter,
-            sample_peak,
-            true_peak,
+            sample_peak: sample_peak.into_boxed_slice(),
+            true_peak: true_peak.into_boxed_slice(),
             window,
             history,
         })
@@ -450,13 +450,14 @@ impl EbuR128 {
             audio_data_frames
                 .checked_mul(channels as usize)
                 .ok_or(Error::NoMem)?
-        ];
+        ]
+        .into_boxed_slice();
 
         if self.channels != channels {
             self.channels = channels;
-            self.channel_map = default_channel_map(channels);
-            self.sample_peak = vec![0.0; channels as usize];
-            self.true_peak = vec![0.0; channels as usize];
+            self.channel_map = default_channel_map(channels).into_boxed_slice();
+            self.sample_peak = vec![0.0; channels as usize].into_boxed_slice();
+            self.true_peak = vec![0.0; channels as usize].into_boxed_slice();
         }
 
         if self.rate != rate {
@@ -500,7 +501,7 @@ impl EbuR128 {
         }
 
         let mut audio_data_frames = (self.rate as usize)
-            .checked_mul(window)
+            .checked_mul(window as usize)
             .ok_or(Error::NoMem)?
             / 1000;
         if audio_data_frames % self.samples_in_100ms != 0 {
@@ -516,7 +517,8 @@ impl EbuR128 {
             audio_data_frames
                 .checked_mul(self.channels as usize)
                 .ok_or(Error::NoMem)?
-        ];
+        ]
+        .into_boxed_slice();
         self.window = window as usize;
 
         // the first block needs 400ms of audio data

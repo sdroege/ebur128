@@ -34,9 +34,9 @@ pub struct Interp {
     delay: usize,
     /// List of subfilters (one for each factor)
     // TODO: Try with SmallVec
-    filter: Vec<Filter>,
+    filter: Box<[Filter]>,
     /// List of delay buffers (one for each channel)
-    z: Vec<f32>,
+    z: Box<[f32]>,
     /// Current delay buffer index
     zi: usize,
 }
@@ -44,7 +44,7 @@ pub struct Interp {
 #[derive(Debug)]
 struct Filter {
     /// List of subfilter coefficients and corresponding delay indices
-    coeff: Vec<(f64, usize)>,
+    coeff: Box<[(f64, usize)]>,
 }
 
 impl Interp {
@@ -57,8 +57,7 @@ impl Interp {
         let mut filter = Vec::with_capacity(factor);
 
         for _ in 0..factor {
-            let f = Filter { coeff: vec![] };
-            filter.push(f);
+            filter.push(vec![]);
         }
 
         // One delay buffer per channel.
@@ -86,7 +85,7 @@ impl Interp {
                 let f = j % factor;
 
                 let f = &mut filter[f];
-                f.coeff.push((c, j / factor));
+                f.push((c, j / factor));
             }
         }
 
@@ -95,8 +94,13 @@ impl Interp {
             taps,
             channels,
             delay,
-            filter,
-            z,
+            filter: filter
+                .into_iter()
+                .map(|f| Filter {
+                    coeff: f.into_boxed_slice(),
+                })
+                .collect(),
+            z: z.into_boxed_slice(),
             zi: 0,
         }
     }
@@ -134,7 +138,7 @@ impl Interp {
                 // Apply coefficients
                 for (filter, dst) in self.filter.iter().zip(dst.iter_mut()) {
                     let mut acc = 0.0;
-                    for (c, index) in &filter.coeff {
+                    for (c, index) in &*filter.coeff {
                         let mut i = zi as i32 - *index as i32;
                         if i < 0 {
                             i += self.delay as i32;

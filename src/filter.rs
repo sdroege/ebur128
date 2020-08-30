@@ -23,19 +23,24 @@ use std::fmt;
 
 use crate::ebur128::Channel;
 
+/// BS.1770 filter and optional sample/true peak measurement context.
 pub struct Filter {
     channels: u32,
-    // BS.1770 filter coefficients (numerator).
+    /// BS.1770 filter coefficients (numerator).
     b: [f64; 5],
-    // BS.1770 filter coefficients (denominator).
+    /// BS.1770 filter coefficients (denominator).
     a: [f64; 5],
-    // One filter state per channel.
+    /// One filter state per channel.
     filter_state: Vec<[f64; 5]>,
 
+    /// Whether to measure sample peak.
     calculate_sample_peak: bool,
+    /// Previously measured sample peak.
     sample_peak: Vec<f64>,
 
+    /// True peak measurement if enabled.
     tp: Option<crate::true_peak::TruePeak>,
+    /// Previously measured true peak.
     true_peak: Vec<f64>,
 }
 
@@ -291,6 +296,7 @@ impl Filter {
     }
 }
 
+/// Trait for converting samples into f64 in the range [0,1].
 pub trait AsF64: crate::true_peak::AsF32 + Copy + PartialOrd {
     fn as_f64(self) -> f64;
 }

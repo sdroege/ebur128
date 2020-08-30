@@ -149,46 +149,46 @@ pub enum Channel {
 
 /// EBU R128 loudness analyzer.
 pub struct EbuR128 {
-    // The current mode.
+    /// The current mode.
     mode: Mode,
-    // The sample rate.
+    /// The sample rate.
     rate: u32,
-    // The number of channels
+    /// The number of channels
     channels: u32,
 
-    // Filtered audio data (used as ring buffer).
+    /// Filtered audio data (used as ring buffer).
     audio_data: Vec<f64>,
-    // Current index for audio_data.
+    /// Current index for audio_data.
     audio_data_index: usize,
 
-    // How many frames are needed for a gating block. Will correspond to 400ms
-    // of audio at initialization, and 100ms after the first block (75% overlap
-    // as specified in the 2011 revision of BS1770).
+    /// How many frames are needed for a gating block. Will correspond to 400ms
+    /// of audio at initialization, and 100ms after the first block (75% overlap
+    /// as specified in the 2011 revision of BS1770).
     needed_frames: usize,
 
-    // The channel map. Has as many elements as there are channels.
+    /// The channel map. Has as many elements as there are channels.
     channel_map: Vec<Channel>,
 
-    // How many samples fit in 100ms (rounded).
+    /// How many samples fit in 100ms (rounded).
     samples_in_100ms: usize,
 
-    // Filter.
+    /// Filter.
     filter: crate::filter::Filter,
 
-    // Block energy history.
+    /// Block energy history.
     block_energy_history: crate::history::History,
 
-    // Short term block energy history.
+    /// Short term block energy history.
     short_term_block_energy_history: crate::history::History,
     short_term_frame_counter: usize,
 
-    // Maximum sample peak, one per channel.
+    /// Maximum sample peak, one per channel.
     sample_peak: Vec<f64>,
 
-    // Maximum true peak, one per channel.
+    /// Maximum true peak, one per channel.
     true_peak: Vec<f64>,
 
-    // The maximum window duration in ms.
+    /// The maximum window duration in ms.
     window: usize,
     history: usize,
 }

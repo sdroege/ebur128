@@ -106,7 +106,7 @@ impl Interp {
     }
 
     pub fn process(&mut self, src: &[f32], dst: &mut [f32]) {
-        assert!(src.len() * self.factor == dst.len());
+        assert!(src.len().checked_mul(self.factor) == Some(dst.len()));
         assert!(self.z.len() == self.delay * self.channels as usize);
         assert!(self.filter.len() == self.factor);
         assert!(self.zi < self.delay);

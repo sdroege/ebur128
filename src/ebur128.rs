@@ -410,6 +410,12 @@ impl EbuR128 {
             return Err(Error::InvalidChannelIndex);
         }
 
+        for (channel_number, value) in channel_map.iter().enumerate() {
+            if *value == Channel::DualMono && (self.channels != 1 || channel_number != 0) {
+                return Err(Error::InvalidChannelIndex);
+            }
+        }
+
         self.channel_map.copy_from_slice(channel_map);
         Ok(())
     }

@@ -39,7 +39,7 @@ specifically the [variant used by Rust](http://doc.crates.io/manifest.html#the-v
 ### Fixed
 - Fix build with the MSVC toolchain.
 
-## [0.1.0] - 2020-01-06
+## 0.1.0 - 2020-01-06
 - Initial release of ebur128.
 
 [Unreleased]: https://github.com/sdroege/rust-muldiv/compare/0.1.4...HEAD

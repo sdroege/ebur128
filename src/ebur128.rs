@@ -570,6 +570,34 @@ impl EbuR128 {
         Ok(())
     }
 
+    /// Resets the current state.
+    pub fn reset(&mut self) {
+        // TODO: Use slice::fill() once stabilized
+        for v in &mut *self.audio_data {
+            *v = 0.0;
+        }
+
+        // the first block needs 400ms of audio data
+        self.needed_frames = self.samples_in_100ms * 4;
+        // start at the beginning of the buffer
+        self.audio_data_index = 0;
+        // reset short term frame counter
+        self.short_term_frame_counter = 0;
+
+        // TODO: Use slice::fill() once stabilized
+        for v in &mut *self.true_peak {
+            *v = 0.0;
+        }
+        // TODO: Use slice::fill() once stabilized
+        for v in &mut *self.sample_peak {
+            *v = 0.0;
+        }
+
+        self.filter.reset();
+        self.block_energy_history.reset();
+        self.short_term_block_energy_history.reset();
+    }
+
     fn add_frames<T: crate::filter::AsF64>(&mut self, frames: &[T]) -> Result<(), Error> {
         if frames.is_empty() {
             return Ok(());
@@ -976,6 +1004,42 @@ mod tests {
             -10.650000000000006,
             abs <= 0.000001
         );
+
+        ebu.reset();
+
+        assert_float_eq!(
+            ebu.loudness_global().unwrap(),
+            -std::f64::INFINITY,
+            abs <= 0.000001
+        );
+        assert_float_eq!(
+            ebu.loudness_momentary().unwrap(),
+            -std::f64::INFINITY,
+            abs <= 0.000001
+        );
+        assert_float_eq!(
+            ebu.loudness_shortterm().unwrap(),
+            -std::f64::INFINITY,
+            abs <= 0.000001
+        );
+        assert_float_eq!(
+            ebu.loudness_window(1).unwrap(),
+            -std::f64::INFINITY,
+            abs <= 0.000001
+        );
+        assert_float_eq!(ebu.loudness_range().unwrap(), 0.0, abs <= 0.000001);
+
+        assert_float_eq!(ebu.sample_peak(0).unwrap(), 0.0, abs <= 0.000001);
+        assert_float_eq!(ebu.sample_peak(1).unwrap(), 0.0, abs <= 0.000001);
+        assert_float_eq!(ebu.prev_sample_peak(0).unwrap(), 0.0, abs <= 0.000001);
+        assert_float_eq!(ebu.prev_sample_peak(1).unwrap(), 0.0, abs <= 0.000001);
+
+        assert_float_eq!(ebu.true_peak(0).unwrap(), 0.0, abs <= 0.000001);
+        assert_float_eq!(ebu.true_peak(1).unwrap(), 0.0, abs <= 0.000001);
+        assert_float_eq!(ebu.prev_true_peak(0).unwrap(), 0.0, abs <= 0.000001);
+        assert_float_eq!(ebu.prev_true_peak(1).unwrap(), 0.0, abs <= 0.000001);
+
+        assert_float_eq!(ebu.relative_threshold().unwrap(), -70.0, abs <= 0.000001);
     }
 
     #[test]

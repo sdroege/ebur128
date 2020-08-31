@@ -91,6 +91,13 @@ impl Histogram {
         self.0[idx] += 1;
     }
 
+    fn reset(&mut self) {
+        // TODO: Use slice::fill() once stabilized
+        for v in self.0.iter_mut() {
+            *v = 0;
+        }
+    }
+
     fn calc_relative_threshold(&self) -> (u64, f64) {
         let mut above_thresh_counter = 0;
         let mut relative_threshold = 0.0;
@@ -190,6 +197,10 @@ impl Queue {
         self.max = max;
     }
 
+    fn reset(&mut self) {
+        self.queue.clear();
+    }
+
     fn calc_relative_threshold(&self) -> (u64, f64) {
         (self.queue.len() as u64, self.queue.iter().sum::<f64>())
     }
@@ -263,6 +274,13 @@ impl History {
         match self {
             History::Histogram(_) => (),
             History::Queue(ref mut q) => q.set_max_size(max),
+        }
+    }
+
+    pub fn reset(&mut self) {
+        match self {
+            History::Histogram(ref mut h) => h.reset(),
+            History::Queue(ref mut q) => q.reset(),
         }
     }
 

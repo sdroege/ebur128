@@ -109,6 +109,14 @@ impl Interp {
         self.factor
     }
 
+    pub fn reset(&mut self) {
+        // TODO: Use slice::fill() once stabilized
+        for v in &mut *self.z {
+            *v = 0.0;
+        }
+        self.zi = 0;
+    }
+
     pub fn process(&mut self, src: &[f32], dst: &mut [f32]) {
         assert!(src.len().checked_mul(self.factor) == Some(dst.len()));
         assert!(self.z.len() == self.delay * self.channels as usize);

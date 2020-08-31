@@ -148,6 +148,21 @@ impl Filter {
         }
     }
 
+    pub fn reset(&mut self) {
+        self.reset_peaks();
+
+        for f in &mut *self.filter_state {
+            // TODO: Use slice::fill() once stabilized
+            for v in &mut *f {
+                *v = 0.0;
+            }
+        }
+
+        if let Some(ref mut tp) = self.tp {
+            tp.reset();
+        }
+    }
+
     pub fn sample_peak(&self) -> &[f64] {
         &*self.sample_peak
     }

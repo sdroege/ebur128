@@ -62,6 +62,10 @@ impl TruePeak {
         })
     }
 
+    pub fn reset(&mut self) {
+        self.interp.reset();
+    }
+
     // FIXME: Use f32 for storage
     pub fn check_true_peak<T: AsF32>(&mut self, src: &[T], peaks: &mut [f64]) {
         assert!(src.len() <= self.buffer_input.len());

@@ -271,7 +271,7 @@ impl EbuR128 {
         let sample_peak = vec![0.0; channels as usize];
         let true_peak = vec![0.0; channels as usize];
 
-        let history = usize::MAX;
+        let history = std::usize::MAX;
         let samples_in_100ms = (rate as usize + 5) / 10;
 
         let window = if mode.contains(Mode::S) {
@@ -710,7 +710,7 @@ impl EbuR128 {
         let energy = self.energy_in_interval(self.samples_in_100ms * 4)?;
 
         if energy <= 0.0 {
-            return Ok(-f64::INFINITY);
+            return Ok(-std::f64::INFINITY);
         }
 
         Ok(energy_to_loudness(energy))
@@ -725,7 +725,7 @@ impl EbuR128 {
         let energy = self.energy_shortterm()?;
 
         if energy <= 0.0 {
-            return Ok(-f64::INFINITY);
+            return Ok(-std::f64::INFINITY);
         }
 
         Ok(energy_to_loudness(energy))
@@ -743,7 +743,7 @@ impl EbuR128 {
         let energy = self.energy_in_interval(interval_frames)?;
 
         if energy <= 0.0 {
-            return Ok(-f64::INFINITY);
+            return Ok(-std::f64::INFINITY);
         }
 
         Ok(energy_to_loudness(energy))

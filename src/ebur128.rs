@@ -614,15 +614,18 @@ impl EbuR128 {
             let num_frames = src.len() / self.channels as usize;
             let needed_samples = self.needed_frames * self.channels as usize;
 
-            let dest = &mut self.audio_data
-                [self.audio_data_index..(self.audio_data_index + needed_samples)];
-
             if num_frames >= self.needed_frames {
                 let (current_frame, next_src) = src.split_at(needed_samples);
                 src = next_src;
-                self.filter.process(current_frame, dest, &self.channel_map);
 
-                self.audio_data_index += needed_samples;
+                self.filter.process(
+                    current_frame,
+                    &mut *self.audio_data,
+                    self.audio_data_index,
+                    &self.channel_map,
+                );
+
+                self.audio_data_index += self.needed_frames;
                 if self.mode.contains(Mode::I) {
                     let energy = crate::filter::Filter::calc_gating_block(
                         self.samples_in_100ms * 4,
@@ -642,17 +645,21 @@ impl EbuR128 {
                     }
                 }
 
-                if self.audio_data_index == self.audio_data.len() {
+                if self.audio_data_index == self.audio_data.len() / self.channels as usize {
                     self.audio_data_index = 0;
                 }
 
                 // 100ms are needed for all blocks besides the first one
                 self.needed_frames = self.samples_in_100ms;
             } else {
-                self.filter
-                    .process(src, &mut dest[..src.len()], &self.channel_map);
+                self.filter.process(
+                    src,
+                    &mut *self.audio_data,
+                    self.audio_data_index,
+                    &self.channel_map,
+                );
 
-                self.audio_data_index += src.len();
+                self.audio_data_index += num_frames;
                 if self.mode.contains(Mode::LRA) {
                     self.short_term_frame_counter += num_frames;
                 }

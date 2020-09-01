@@ -598,34 +598,38 @@ impl EbuR128 {
         self.short_term_block_energy_history.reset();
     }
 
-    fn add_frames<T: crate::filter::AsF64>(&mut self, frames: &[T]) -> Result<(), Error> {
-        if frames.is_empty() {
+    /// Process frames. This is the generic variant of the different public add_frames() functions
+    /// that are defined below.
+    fn add_frames<'a, T: crate::AsF64 + 'a, S: crate::Samples<'a, T>>(
+        &mut self,
+        mut src: S,
+    ) -> Result<(), Error> {
+        if src.frames() == 0 {
             return Ok(());
         }
 
-        if self.channels == 0 || frames.len() % self.channels as usize != 0 {
+        if self.channels == 0 {
             return Err(Error::NoMem);
         }
 
         self.filter.reset_peaks();
 
-        let mut src = frames;
-        while !src.is_empty() {
-            let num_frames = src.len() / self.channels as usize;
-            let needed_samples = self.needed_frames * self.channels as usize;
+        while src.frames() > 0 {
+            let num_frames = src.frames();
 
             if num_frames >= self.needed_frames {
-                let (current_frame, next_src) = src.split_at(needed_samples);
-                src = next_src;
+                let (current, next) = src.split_at(self.needed_frames);
 
                 self.filter.process(
-                    current_frame,
+                    &current,
                     &mut *self.audio_data,
                     self.audio_data_index,
                     &self.channel_map,
                 );
 
+                src = next;
                 self.audio_data_index += self.needed_frames;
+
                 if self.mode.contains(Mode::I) {
                     let energy = crate::filter::Filter::calc_gating_block(
                         self.samples_in_100ms * 4,
@@ -652,8 +656,10 @@ impl EbuR128 {
                 // 100ms are needed for all blocks besides the first one
                 self.needed_frames = self.samples_in_100ms;
             } else {
+                let (current, next) = src.split_at(num_frames);
+
                 self.filter.process(
-                    src,
+                    &current,
                     &mut *self.audio_data,
                     self.audio_data_index,
                     &self.channel_map,
@@ -663,8 +669,9 @@ impl EbuR128 {
                 if self.mode.contains(Mode::LRA) {
                     self.short_term_frame_counter += num_frames;
                 }
+
+                src = next;
                 self.needed_frames -= num_frames;
-                src = &[];
             }
         }
 
@@ -687,24 +694,44 @@ impl EbuR128 {
         Ok(())
     }
 
-    /// Add frames to be processed.
+    /// Add interleaved frames to be processed.
     pub fn add_frames_i16(&mut self, frames: &[i16]) -> Result<(), Error> {
-        self.add_frames(frames)
+        self.add_frames(crate::Interleaved::new(frames, self.channels as usize)?)
     }
 
-    /// Add frames to be processed.
+    /// Add interleaved frames to be processed.
     pub fn add_frames_i32(&mut self, frames: &[i32]) -> Result<(), Error> {
-        self.add_frames(frames)
+        self.add_frames(crate::Interleaved::new(frames, self.channels as usize)?)
     }
 
-    /// Add frames to be processed.
+    /// Add interleaved frames to be processed.
     pub fn add_frames_f32(&mut self, frames: &[f32]) -> Result<(), Error> {
-        self.add_frames(frames)
+        self.add_frames(crate::Interleaved::new(frames, self.channels as usize)?)
     }
 
-    /// Add frames to be processed.
+    /// Add interleaved frames to be processed.
     pub fn add_frames_f64(&mut self, frames: &[f64]) -> Result<(), Error> {
-        self.add_frames(frames)
+        self.add_frames(crate::Interleaved::new(frames, self.channels as usize)?)
+    }
+
+    /// Add planar frames to be processed.
+    pub fn add_frames_planar_i16(&mut self, frames: &[&[i16]]) -> Result<(), Error> {
+        self.add_frames(crate::Planar::new(frames)?)
+    }
+
+    /// Add planar frames to be processed.
+    pub fn add_frames_planar_i32(&mut self, frames: &[&[i32]]) -> Result<(), Error> {
+        self.add_frames(crate::Planar::new(frames)?)
+    }
+
+    /// Add planar frames to be processed.
+    pub fn add_frames_planar_f32(&mut self, frames: &[&[f32]]) -> Result<(), Error> {
+        self.add_frames(crate::Planar::new(frames)?)
+    }
+
+    /// Add planar frames to be processed.
+    pub fn add_frames_planar_f64(&mut self, frames: &[&[f64]]) -> Result<(), Error> {
+        self.add_frames(crate::Planar::new(frames)?)
     }
 
     /// Get global integrated loudness in LUFS.
@@ -1513,6 +1540,322 @@ mod tests {
 
         let mut ebu = EbuR128::new(2, 48_000, Mode::all() & !Mode::HISTOGRAM).unwrap();
         ebu.add_frames_f64(&data).unwrap();
+
+        assert_float_eq!(
+            ebu.loudness_global().unwrap(),
+            -0.6826039914165554,
+            abs <= 0.000001
+        );
+        assert_float_eq!(
+            ebu.loudness_momentary().unwrap(),
+            -0.6813325598268921,
+            abs <= 0.000001
+        );
+        assert_float_eq!(
+            ebu.loudness_shortterm().unwrap(),
+            -0.6827591715100236,
+            abs <= 0.000001
+        );
+        assert_float_eq!(
+            ebu.loudness_window(1).unwrap(),
+            -0.8742956620008693,
+            abs <= 0.000001
+        );
+        assert_float_eq!(
+            ebu.loudness_range().unwrap(),
+            0.00006921150169403312,
+            abs <= 0.000001
+        );
+
+        assert_float_eq!(ebu.sample_peak(0).unwrap(), 1.0, abs <= 0.000001);
+        assert_float_eq!(ebu.sample_peak(1).unwrap(), 1.0, abs <= 0.000001);
+        assert_float_eq!(ebu.prev_sample_peak(0).unwrap(), 1.0, abs <= 0.000001);
+        assert_float_eq!(ebu.prev_sample_peak(1).unwrap(), 1.0, abs <= 0.000001);
+
+        assert_float_eq!(
+            ebu.true_peak(0).unwrap(),
+            1.0008491277694702,
+            abs <= 0.000001
+        );
+        assert_float_eq!(
+            ebu.true_peak(1).unwrap(),
+            1.0008491277694702,
+            abs <= 0.000001
+        );
+        assert_float_eq!(
+            ebu.prev_true_peak(0).unwrap(),
+            1.0008491277694702,
+            abs <= 0.000001
+        );
+        assert_float_eq!(
+            ebu.prev_true_peak(1).unwrap(),
+            1.0008491277694702,
+            abs <= 0.000001
+        );
+
+        assert_float_eq!(
+            ebu.relative_threshold().unwrap(),
+            -10.682603991416554,
+            abs <= 0.000001
+        );
+    }
+
+    #[test]
+    fn sine_stereo_i16_planar_no_histogram() {
+        let mut data = vec![0i16; 48_000 * 5 * 2];
+        let mut accumulator = 0.0;
+        let step = 2.0 * std::f32::consts::PI * 440.0 / 48_000.0;
+        let (fst, snd) = data.split_at_mut(48_000 * 5);
+        for (fst, snd) in fst.iter_mut().zip(snd.iter_mut()) {
+            let val = f32::sin(accumulator) * (std::i16::MAX - 1) as f32;
+            *fst = val as i16;
+            *snd = val as i16;
+            accumulator += step;
+        }
+
+        let mut ebu = EbuR128::new(2, 48_000, Mode::all() & !Mode::HISTOGRAM).unwrap();
+        ebu.add_frames_planar_i16(&[fst, snd]).unwrap();
+
+        assert_float_eq!(
+            ebu.loudness_global().unwrap(),
+            -0.683303243667768,
+            abs <= 0.000001
+        );
+        assert_float_eq!(
+            ebu.loudness_momentary().unwrap(),
+            -0.6820309226891973,
+            abs <= 0.000001
+        );
+        assert_float_eq!(
+            ebu.loudness_shortterm().unwrap(),
+            -0.6834583474398446,
+            abs <= 0.000001
+        );
+        assert_float_eq!(
+            ebu.loudness_window(1).unwrap(),
+            -0.875007988101488,
+            abs <= 0.000001
+        );
+        assert_float_eq!(
+            ebu.loudness_range().unwrap(),
+            0.00006950793233284625,
+            abs <= 0.000001
+        );
+
+        assert_float_eq!(
+            ebu.sample_peak(0).unwrap(),
+            0.99993896484375,
+            abs <= 0.000001
+        );
+        assert_float_eq!(
+            ebu.sample_peak(1).unwrap(),
+            0.99993896484375,
+            abs <= 0.000001
+        );
+        assert_float_eq!(
+            ebu.prev_sample_peak(0).unwrap(),
+            0.99993896484375,
+            abs <= 0.000001
+        );
+        assert_float_eq!(
+            ebu.prev_sample_peak(1).unwrap(),
+            0.99993896484375,
+            abs <= 0.000001
+        );
+
+        assert_float_eq!(
+            ebu.true_peak(0).unwrap(),
+            1.0007814168930054,
+            abs <= 0.000001
+        );
+        assert_float_eq!(
+            ebu.true_peak(1).unwrap(),
+            1.0007814168930054,
+            abs <= 0.000001
+        );
+        assert_float_eq!(
+            ebu.prev_true_peak(0).unwrap(),
+            1.0007814168930054,
+            abs <= 0.000001
+        );
+        assert_float_eq!(
+            ebu.prev_true_peak(1).unwrap(),
+            1.0007814168930054,
+            abs <= 0.000001
+        );
+
+        assert_float_eq!(
+            ebu.relative_threshold().unwrap(),
+            -10.683303243667767,
+            abs <= 0.000001
+        );
+    }
+
+    #[test]
+    fn sine_stereo_i32_planar_no_histogram() {
+        let mut data = vec![0i32; 48_000 * 5 * 2];
+        let mut accumulator = 0.0;
+        let step = 2.0 * std::f32::consts::PI * 440.0 / 48_000.0;
+        let (fst, snd) = data.split_at_mut(48_000 * 5);
+        for (fst, snd) in fst.iter_mut().zip(snd.iter_mut()) {
+            let val = f32::sin(accumulator) * (std::i32::MAX - 1) as f32;
+            *fst = val as i32;
+            *snd = val as i32;
+            accumulator += step;
+        }
+
+        let mut ebu = EbuR128::new(2, 48_000, Mode::all() & !Mode::HISTOGRAM).unwrap();
+        ebu.add_frames_planar_i32(&[fst, snd]).unwrap();
+
+        assert_float_eq!(
+            ebu.loudness_global().unwrap(),
+            -0.6826039914171368,
+            abs <= 0.000001
+        );
+        assert_float_eq!(
+            ebu.loudness_momentary().unwrap(),
+            -0.6813325598274425,
+            abs <= 0.000001
+        );
+        assert_float_eq!(
+            ebu.loudness_shortterm().unwrap(),
+            -0.6827591715105212,
+            abs <= 0.000001
+        );
+        assert_float_eq!(
+            ebu.loudness_window(1).unwrap(),
+            -0.8742956620040943,
+            abs <= 0.000001
+        );
+        assert_float_eq!(
+            ebu.loudness_range().unwrap(),
+            0.00006921150165073442,
+            abs <= 0.000001
+        );
+
+        assert_float_eq!(ebu.sample_peak(0).unwrap(), 1.0, abs <= 0.000001);
+        assert_float_eq!(ebu.sample_peak(1).unwrap(), 1.0, abs <= 0.000001);
+        assert_float_eq!(ebu.prev_sample_peak(0).unwrap(), 1.0, abs <= 0.000001);
+        assert_float_eq!(ebu.prev_sample_peak(1).unwrap(), 1.0, abs <= 0.000001);
+
+        assert_float_eq!(
+            ebu.true_peak(0).unwrap(),
+            1.0008491277694702,
+            abs <= 0.000001
+        );
+        assert_float_eq!(
+            ebu.true_peak(1).unwrap(),
+            1.0008491277694702,
+            abs <= 0.000001
+        );
+        assert_float_eq!(
+            ebu.prev_true_peak(0).unwrap(),
+            1.0008491277694702,
+            abs <= 0.000001
+        );
+        assert_float_eq!(
+            ebu.prev_true_peak(1).unwrap(),
+            1.0008491277694702,
+            abs <= 0.000001
+        );
+
+        assert_float_eq!(
+            ebu.relative_threshold().unwrap(),
+            -10.682603991417135,
+            abs <= 0.000001
+        );
+    }
+
+    #[test]
+    fn sine_stereo_f32_planar_no_histogram() {
+        let mut data = vec![0.0f32; 48_000 * 5 * 2];
+        let mut accumulator = 0.0;
+        let step = 2.0 * std::f32::consts::PI * 440.0 / 48_000.0;
+        let (fst, snd) = data.split_at_mut(48_000 * 5);
+        for (fst, snd) in fst.iter_mut().zip(snd.iter_mut()) {
+            let val = f32::sin(accumulator);
+            *fst = val;
+            *snd = val;
+            accumulator += step;
+        }
+
+        let mut ebu = EbuR128::new(2, 48_000, Mode::all() & !Mode::HISTOGRAM).unwrap();
+        ebu.add_frames_planar_f32(&[fst, snd]).unwrap();
+
+        assert_float_eq!(
+            ebu.loudness_global().unwrap(),
+            -0.6826039914165554,
+            abs <= 0.000001
+        );
+        assert_float_eq!(
+            ebu.loudness_momentary().unwrap(),
+            -0.6813325598268921,
+            abs <= 0.000001
+        );
+        assert_float_eq!(
+            ebu.loudness_shortterm().unwrap(),
+            -0.6827591715100236,
+            abs <= 0.000001
+        );
+        assert_float_eq!(
+            ebu.loudness_window(1).unwrap(),
+            -0.8742956620008693,
+            abs <= 0.000001
+        );
+        assert_float_eq!(
+            ebu.loudness_range().unwrap(),
+            0.00006921150169403312,
+            abs <= 0.000001
+        );
+
+        assert_float_eq!(ebu.sample_peak(0).unwrap(), 1.0, abs <= 0.000001);
+        assert_float_eq!(ebu.sample_peak(1).unwrap(), 1.0, abs <= 0.000001);
+        assert_float_eq!(ebu.prev_sample_peak(0).unwrap(), 1.0, abs <= 0.000001);
+        assert_float_eq!(ebu.prev_sample_peak(1).unwrap(), 1.0, abs <= 0.000001);
+
+        assert_float_eq!(
+            ebu.true_peak(0).unwrap(),
+            1.0008491277694702,
+            abs <= 0.000001
+        );
+        assert_float_eq!(
+            ebu.true_peak(1).unwrap(),
+            1.0008491277694702,
+            abs <= 0.000001
+        );
+        assert_float_eq!(
+            ebu.prev_true_peak(0).unwrap(),
+            1.0008491277694702,
+            abs <= 0.000001
+        );
+        assert_float_eq!(
+            ebu.prev_true_peak(1).unwrap(),
+            1.0008491277694702,
+            abs <= 0.000001
+        );
+
+        assert_float_eq!(
+            ebu.relative_threshold().unwrap(),
+            -10.682603991416554,
+            abs <= 0.000001
+        );
+    }
+
+    #[test]
+    fn sine_stereo_f64_planar_no_histogram() {
+        let mut data = vec![0.0f64; 48_000 * 5 * 2];
+        let mut accumulator = 0.0;
+        let step = 2.0 * std::f32::consts::PI * 440.0 / 48_000.0;
+        let (fst, snd) = data.split_at_mut(48_000 * 5);
+        for (fst, snd) in fst.iter_mut().zip(snd.iter_mut()) {
+            let val = f32::sin(accumulator);
+            *fst = val as f64;
+            *snd = val as f64;
+            accumulator += step;
+        }
+
+        let mut ebu = EbuR128::new(2, 48_000, Mode::all() & !Mode::HISTOGRAM).unwrap();
+        ebu.add_frames_planar_f64(&[fst, snd]).unwrap();
 
         assert_float_eq!(
             ebu.loudness_global().unwrap(),

@@ -193,12 +193,21 @@ impl Filter {
         if self.calculate_sample_peak {
             assert!(self.sample_peak.len() == self.channels as usize);
 
-            for frame in src.chunks_exact(self.channels as usize) {
-                for (c, sample) in frame.iter().enumerate() {
-                    let v = sample.as_f64().abs();
-                    if v > self.sample_peak[c] {
-                        self.sample_peak[c] = v;
+            for (c, sample_peak) in self.sample_peak.iter_mut().enumerate() {
+                let mut max = 0.0;
+
+                assert!(c < self.channels as usize);
+
+                for frame in src.chunks_exact(self.channels as usize) {
+                    let v = frame[c].as_f64().abs();
+                    if v > max {
+                        max = v;
                     }
+                }
+
+                max /= T::MAX;
+                if max > *sample_peak {
+                    *sample_peak = max;
                 }
             }
         }
@@ -218,7 +227,7 @@ impl Filter {
                 .chunks_exact(self.channels as usize)
                 .zip(dest.chunks_exact_mut(self.channels as usize))
             {
-                filter_state[0] = src[c].as_f64()
+                filter_state[0] = src[c].as_f64() / T::MAX
                     - self.a[1] * filter_state[1]
                     - self.a[2] * filter_state[2]
                     - self.a[3] * filter_state[3]
@@ -313,28 +322,34 @@ impl Filter {
 
 /// Trait for converting samples into f64 in the range [0,1].
 pub trait AsF64: crate::true_peak::AsF32 + Copy + PartialOrd {
+    const MAX: f64;
+
     fn as_f64(self) -> f64;
 }
 
 impl AsF64 for i16 {
+    const MAX: f64 = -(std::i16::MIN as f64);
     fn as_f64(self) -> f64 {
-        self as f64 / -(std::i16::MIN as f64)
+        self as f64
     }
 }
 
 impl AsF64 for i32 {
+    const MAX: f64 = -(std::i32::MIN as f64);
     fn as_f64(self) -> f64 {
-        self as f64 / -(std::i32::MIN as f64)
+        self as f64
     }
 }
 
 impl AsF64 for f32 {
+    const MAX: f64 = 1.0;
     fn as_f64(self) -> f64 {
         self as f64
     }
 }
 
 impl AsF64 for f64 {
+    const MAX: f64 = 1.0;
     fn as_f64(self) -> f64 {
         self
     }

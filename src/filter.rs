@@ -175,20 +175,15 @@ impl Filter {
         &mut self,
         src: &[T],
         dest: &mut [f64],
+        dest_index: usize,
         channel_map: &[crate::ebur128::Channel],
     ) {
         let ftz = ftz::Ftz::new();
 
-        assert!(src.len() == dest.len());
         assert!(src.len() % self.channels as usize == 0);
         assert!(dest.len() % self.channels as usize == 0);
-        assert!(src.len() / self.channels as usize == dest.len() / self.channels as usize);
         assert!(channel_map.len() == self.channels as usize);
         assert!(self.filter_state.len() == self.channels as usize);
-
-        // TODO: Deinterleaving into a &mut [f64] as a first step seems beneficial and
-        // would also prevent the deinterleaving that now happens inside check_true_peak()
-        // anyway
 
         if self.calculate_sample_peak {
             assert!(self.sample_peak.len() == self.channels as usize);
@@ -217,22 +212,31 @@ impl Filter {
             tp.check_true_peak(src, &mut *self.true_peak);
         }
 
-        for (c, channel_map) in channel_map.iter().enumerate() {
+        let dest_stride = dest.len() / self.channels as usize;
+        assert!(dest_index + src.len() / self.channels as usize <= dest_stride);
+
+        for (c, (channel_map, dest)) in channel_map
+            .iter()
+            .zip(dest.chunks_exact_mut(dest_stride))
+            .enumerate()
+        {
             if *channel_map == crate::ebur128::Channel::Unused {
                 continue;
             }
 
+            assert!(c < self.channels as usize);
+
             let filter_state = &mut self.filter_state[c];
             for (src, dest) in src
                 .chunks_exact(self.channels as usize)
-                .zip(dest.chunks_exact_mut(self.channels as usize))
+                .zip(dest[dest_index..].iter_mut())
             {
                 filter_state[0] = src[c].as_f64() / T::MAX
                     - self.a[1] * filter_state[1]
                     - self.a[2] * filter_state[2]
                     - self.a[3] * filter_state[3]
                     - self.a[4] * filter_state[4];
-                dest[c] = self.b[0] * filter_state[0]
+                *dest = self.b[0] * filter_state[0]
                     + self.b[1] * filter_state[1]
                     + self.b[2] * filter_state[2]
                     + self.b[3] * filter_state[3]
@@ -263,36 +267,38 @@ impl Filter {
         let mut sum = 0.0;
 
         let channels = channel_map.len();
-        assert!(audio_data_index <= audio_data.len());
         assert!(audio_data.len() % channels == 0);
-        assert!(audio_data_index % channels == 0);
+        let audio_data_stride = audio_data.len() / channels;
+        assert!(audio_data_index <= audio_data_stride);
 
-        for (c, channel) in channel_map.iter().enumerate() {
+        for (c, (channel, audio_data)) in channel_map
+            .iter()
+            .zip(audio_data.chunks_exact(audio_data_stride))
+            .enumerate()
+        {
             if *channel == Channel::Unused {
                 continue;
             }
+
+            assert!(c < channels);
+            assert!(audio_data_index <= audio_data.len());
 
             let mut channel_sum = 0.0;
 
             // XXX: Don't use channel_sum += sum() here because that gives slightly different
             // results than the C version because of rounding errors
-            if audio_data_index < frames_per_block * channels {
-                for frame in audio_data[..audio_data_index].chunks_exact(channels) {
-                    channel_sum += frame[c] * frame[c];
+            if audio_data_index < frames_per_block {
+                for frame in &audio_data[..audio_data_index] {
+                    channel_sum += *frame * *frame;
                 }
 
-                for frame in audio_data
-                    [(audio_data.len() - frames_per_block * channels + audio_data_index)..]
-                    .chunks_exact(channels)
+                for frame in &audio_data[(audio_data.len() - frames_per_block + audio_data_index)..]
                 {
-                    channel_sum += frame[c] * frame[c];
+                    channel_sum += *frame * *frame;
                 }
             } else {
-                for frame in audio_data
-                    [(audio_data_index - frames_per_block * channels)..audio_data_index]
-                    .chunks_exact(channels)
-                {
-                    channel_sum += frame[c] * frame[c];
+                for frame in &audio_data[(audio_data_index - frames_per_block)..audio_data_index] {
+                    channel_sum += *frame * *frame;
                 }
             }
 
@@ -533,11 +539,21 @@ mod tests {
                 calculate_sample_peak,
                 calculate_true_peak,
             );
+
+            let mut data_out_tmp = vec![0.0f64; frames * signal.channels as usize];
+
             f.process(
                 &signal.data[..(frames * signal.channels as usize)],
-                &mut data_out,
+                &mut data_out_tmp,
+                0,
                 &channel_map,
             );
+
+            for (c, src) in data_out_tmp.chunks_exact(frames).enumerate() {
+                for (i, src) in src.iter().enumerate() {
+                    data_out[i * signal.channels as usize + c] = *src;
+                }
+            }
 
             (Vec::from(f.sample_peak()), Vec::from(f.true_peak()))
         };
@@ -607,11 +623,21 @@ mod tests {
                 calculate_sample_peak,
                 calculate_true_peak,
             );
+
+            let mut data_out_tmp = vec![0.0f64; frames * signal.channels as usize];
+
             f.process(
                 &signal.data[..(frames * signal.channels as usize)],
-                &mut data_out,
+                &mut data_out_tmp,
+                0,
                 &channel_map,
             );
+
+            for (c, src) in data_out_tmp.chunks_exact(frames).enumerate() {
+                for (i, src) in src.iter().enumerate() {
+                    data_out[i * signal.channels as usize + c] = *src;
+                }
+            }
 
             (Vec::from(f.sample_peak()), Vec::from(f.true_peak()))
         };
@@ -681,11 +707,21 @@ mod tests {
                 calculate_sample_peak,
                 calculate_true_peak,
             );
+
+            let mut data_out_tmp = vec![0.0f64; frames * signal.channels as usize];
+
             f.process(
                 &signal.data[..(frames * signal.channels as usize)],
-                &mut data_out,
+                &mut data_out_tmp,
+                0,
                 &channel_map,
             );
+
+            for (c, src) in data_out_tmp.chunks_exact(frames).enumerate() {
+                for (i, src) in src.iter().enumerate() {
+                    data_out[i * signal.channels as usize + c] = *src;
+                }
+            }
 
             (Vec::from(f.sample_peak()), Vec::from(f.true_peak()))
         };
@@ -755,11 +791,21 @@ mod tests {
                 calculate_sample_peak,
                 calculate_true_peak,
             );
+
+            let mut data_out_tmp = vec![0.0f64; frames * signal.channels as usize];
+
             f.process(
                 &signal.data[..(frames * signal.channels as usize)],
-                &mut data_out,
+                &mut data_out_tmp,
+                0,
                 &channel_map,
             );
+
+            for (c, src) in data_out_tmp.chunks_exact(frames).enumerate() {
+                for (i, src) in src.iter().enumerate() {
+                    data_out[i * signal.channels as usize + c] = *src;
+                }
+            }
 
             (Vec::from(f.sample_peak()), Vec::from(f.true_peak()))
         };
@@ -871,12 +917,24 @@ mod tests {
         let channel_map = crate::ebur128::default_channel_map(block.channels);
         let channel_map_c = default_channel_map_c(block.channels);
 
-        let energy = Filter::calc_gating_block(
-            block.frames_per_block,
-            &block.audio_data,
-            block.audio_data_index,
-            &channel_map,
-        );
+        let energy = {
+            let mut audio_data = vec![0.0; block.audio_data.len()];
+
+            let frames = block.audio_data.len() / block.channels as usize;
+            for (c, dest) in audio_data.chunks_exact_mut(frames).enumerate() {
+                for (i, dest) in dest.iter_mut().enumerate() {
+                    *dest = block.audio_data[i * block.channels as usize + c];
+                }
+            }
+
+            Filter::calc_gating_block(
+                block.frames_per_block,
+                &audio_data,
+                block.audio_data_index / block.channels as usize,
+                &channel_map,
+            )
+        };
+
         let energy_c = unsafe {
             calc_gating_block_c(
                 block.frames_per_block,

@@ -79,17 +79,24 @@ impl TruePeak {
 
         // Deinterleave and convert to f32 for the resampler
         let frames = src.len() / self.channels as usize;
-        for (s, i) in src.chunks_exact(self.channels as usize).enumerate() {
-            for (c, i) in i.iter().enumerate() {
-                // Safety: self.buffer_input.len() >= src.len() and we just reorder
-                *unsafe { self.buffer_input.get_unchecked_mut(frames * c + s) } = i.as_f32();
+        for (c, dest) in self.buffer_input[..src.len()]
+            .chunks_exact_mut(frames)
+            .enumerate()
+        {
+            assert!(c < self.channels as usize);
+
+            for (dest, src) in dest
+                .iter_mut()
+                .zip(src.chunks_exact(self.channels as usize))
+            {
+                *dest = src[c].as_f32();
             }
         }
 
         let interp_factor = self.interp.get_factor();
 
         self.interp.process(
-            &self.buffer_input[..(src.len())],
+            &self.buffer_input[..src.len()],
             &mut self.buffer_output[..(src.len() * interp_factor)],
         );
 
@@ -98,6 +105,8 @@ impl TruePeak {
             .chunks_exact(frames * interp_factor)
             .enumerate()
         {
+            assert!(c < self.channels as usize);
+
             let mut max = 0.0;
             for v in o {
                 max = f32_max(max, v.abs());

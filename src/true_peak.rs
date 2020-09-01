@@ -66,42 +66,49 @@ impl TruePeak {
         self.interp.reset();
     }
 
-    // FIXME: Use f32 for storage
-    pub fn check_true_peak<T: AsF32>(&mut self, src: &[T], peaks: &mut [f64]) {
-        assert!(src.len() <= self.buffer_input.len());
-        assert!(src.len() * self.interp.get_factor() <= self.buffer_output.len());
+    pub fn check_true_peak<'a, T: crate::AsF32 + 'a, S: crate::Samples<'a, T>>(
+        &mut self,
+        src: &S,
+        peaks: &mut [f64],
+    ) {
+        assert!(src.channels() == self.channels as usize);
+        assert!(src.frames() * self.channels as usize <= self.buffer_input.len());
+        assert!(
+            src.frames() * self.channels as usize * self.interp.get_factor()
+                <= self.buffer_output.len()
+        );
         assert!(self.buffer_input.len() * self.interp.get_factor() == self.buffer_output.len());
         assert!(peaks.len() == self.channels as usize);
 
-        if src.is_empty() {
+        let frames = src.frames();
+
+        if frames == 0 {
             return;
         }
 
+        let in_len = frames * self.channels as usize;
+        let interp_factor = self.interp.get_factor();
+        let out_len = frames * self.channels as usize * interp_factor;
+
         // Deinterleave and convert to f32 for the resampler
-        let frames = src.len() / self.channels as usize;
-        for (c, dest) in self.buffer_input[..src.len()]
+        for (c, dest) in self.buffer_input[..in_len]
             .chunks_exact_mut(frames)
             .enumerate()
         {
-            assert!(c < self.channels as usize);
+            assert!(c < src.channels());
 
-            for (dest, src) in dest
-                .iter_mut()
-                .zip(src.chunks_exact(self.channels as usize))
-            {
-                *dest = src[c].as_f32();
-            }
+            src.foreach_sample_zipped(c, dest.iter_mut(), |src, dest| {
+                *dest = src.as_f32_scaled();
+            });
         }
 
-        let interp_factor = self.interp.get_factor();
-
         self.interp.process(
-            &self.buffer_input[..src.len()],
-            &mut self.buffer_output[..(src.len() * interp_factor)],
+            &self.buffer_input[..in_len],
+            &mut self.buffer_output[..out_len],
         );
 
         // Find the maximum
-        for (c, o) in self.buffer_output[..(frames * self.channels as usize * interp_factor)]
+        for (c, o) in self.buffer_output[..out_len]
             .chunks_exact(frames * interp_factor)
             .enumerate()
         {
@@ -109,55 +116,16 @@ impl TruePeak {
 
             let mut max = 0.0;
             for v in o {
-                max = f32_max(max, v.abs());
+                let v = v.abs();
+                if v > max {
+                    max = v;
+                }
             }
-            peaks[c] = f64_max(max as f64, peaks[c]);
+
+            if max as f64 > peaks[c] {
+                peaks[c] = max as f64;
+            }
         }
-    }
-}
-
-fn f32_max(a: f32, b: f32) -> f32 {
-    if a > b {
-        a
-    } else {
-        b
-    }
-}
-
-fn f64_max(a: f64, b: f64) -> f64 {
-    if a > b {
-        a
-    } else {
-        b
-    }
-}
-
-/// Trait for converting samples into f32 in the range [0,1].
-pub trait AsF32: Copy {
-    fn as_f32(self) -> f32;
-}
-
-impl AsF32 for i16 {
-    fn as_f32(self) -> f32 {
-        self as f32 / (-(std::i16::MIN as f32))
-    }
-}
-
-impl AsF32 for i32 {
-    fn as_f32(self) -> f32 {
-        self as f32 / (-(std::i32::MIN as f32))
-    }
-}
-
-impl AsF32 for f32 {
-    fn as_f32(self) -> f32 {
-        self
-    }
-}
-
-impl AsF32 for f64 {
-    fn as_f32(self) -> f32 {
-        self as f32
     }
 }
 
@@ -214,7 +182,11 @@ mod tests {
         {
             let mut tp = TruePeak::new(signal.rate, signal.channels).unwrap();
             tp.check_true_peak(
-                &signal.data[0..(len * signal.channels as usize)],
+                &crate::Interleaved::new(
+                    &signal.data[0..(len * signal.channels as usize)],
+                    signal.channels as usize,
+                )
+                .unwrap(),
                 &mut peaks,
             );
         }
@@ -256,7 +228,11 @@ mod tests {
         {
             let mut tp = TruePeak::new(signal.rate, signal.channels).unwrap();
             tp.check_true_peak(
-                &signal.data[0..(len * signal.channels as usize)],
+                &crate::Interleaved::new(
+                    &signal.data[0..(len * signal.channels as usize)],
+                    signal.channels as usize,
+                )
+                .unwrap(),
                 &mut peaks,
             );
         }
@@ -298,7 +274,11 @@ mod tests {
         {
             let mut tp = TruePeak::new(signal.rate, signal.channels).unwrap();
             tp.check_true_peak(
-                &signal.data[0..(len * signal.channels as usize)],
+                &crate::Interleaved::new(
+                    &signal.data[0..(len * signal.channels as usize)],
+                    signal.channels as usize,
+                )
+                .unwrap(),
                 &mut peaks,
             );
         }
@@ -340,7 +320,11 @@ mod tests {
         {
             let mut tp = TruePeak::new(signal.rate, signal.channels).unwrap();
             tp.check_true_peak(
-                &signal.data[0..(len * signal.channels as usize)],
+                &crate::Interleaved::new(
+                    &signal.data[0..(len * signal.channels as usize)],
+                    signal.channels as usize,
+                )
+                .unwrap(),
                 &mut peaks,
             );
         }

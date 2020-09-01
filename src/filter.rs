@@ -171,18 +171,18 @@ impl Filter {
         &*self.true_peak
     }
 
-    pub fn process<T: AsF64>(
+    pub fn process<'a, T: crate::AsF64 + 'a, S: crate::Samples<'a, T>>(
         &mut self,
-        src: &[T],
+        src: &S,
         dest: &mut [f64],
         dest_index: usize,
         channel_map: &[crate::ebur128::Channel],
     ) {
         let ftz = ftz::Ftz::new();
 
-        assert!(src.len() % self.channels as usize == 0);
         assert!(dest.len() % self.channels as usize == 0);
         assert!(channel_map.len() == self.channels as usize);
+        assert!(src.channels() == self.channels as usize);
         assert!(self.filter_state.len() == self.channels as usize);
 
         if self.calculate_sample_peak {
@@ -191,14 +191,14 @@ impl Filter {
             for (c, sample_peak) in self.sample_peak.iter_mut().enumerate() {
                 let mut max = 0.0;
 
-                assert!(c < self.channels as usize);
+                assert!(c < src.channels());
 
-                for frame in src.chunks_exact(self.channels as usize) {
-                    let v = frame[c].as_f64().abs();
+                src.foreach_sample(c, |sample| {
+                    let v = sample.as_f64().abs();
                     if v > max {
                         max = v;
                     }
-                }
+                });
 
                 max /= T::MAX;
                 if max > *sample_peak {
@@ -213,7 +213,7 @@ impl Filter {
         }
 
         let dest_stride = dest.len() / self.channels as usize;
-        assert!(dest_index + src.len() / self.channels as usize <= dest_stride);
+        assert!(dest_index + src.frames() <= dest_stride);
 
         for (c, (channel_map, dest)) in channel_map
             .iter()
@@ -224,29 +224,33 @@ impl Filter {
                 continue;
             }
 
-            assert!(c < self.channels as usize);
+            assert!(c < src.channels());
 
-            let filter_state = &mut self.filter_state[c];
-            for (src, dest) in src
-                .chunks_exact(self.channels as usize)
-                .zip(dest[dest_index..].iter_mut())
-            {
-                filter_state[0] = src[c].as_f64() / T::MAX
-                    - self.a[1] * filter_state[1]
-                    - self.a[2] * filter_state[2]
-                    - self.a[3] * filter_state[3]
-                    - self.a[4] * filter_state[4];
-                *dest = self.b[0] * filter_state[0]
-                    + self.b[1] * filter_state[1]
-                    + self.b[2] * filter_state[2]
-                    + self.b[3] * filter_state[3]
-                    + self.b[4] * filter_state[4];
+            let Filter {
+                ref mut filter_state,
+                ref a,
+                ref b,
+                ..
+            } = *self;
+            let filter_state = &mut filter_state[c];
+
+            src.foreach_sample_zipped(c, dest[dest_index..].iter_mut(), |src, dest| {
+                filter_state[0] = src.as_f64_scaled()
+                    - a[1] * filter_state[1]
+                    - a[2] * filter_state[2]
+                    - a[3] * filter_state[3]
+                    - a[4] * filter_state[4];
+                *dest = b[0] * filter_state[0]
+                    + b[1] * filter_state[1]
+                    + b[2] * filter_state[2]
+                    + b[3] * filter_state[3]
+                    + b[4] * filter_state[4];
 
                 filter_state[4] = filter_state[3];
                 filter_state[3] = filter_state[2];
                 filter_state[2] = filter_state[1];
                 filter_state[1] = filter_state[0];
-            }
+            });
 
             if ftz.is_none() {
                 for v in filter_state {
@@ -323,41 +327,6 @@ impl Filter {
         sum /= frames_per_block as f64;
 
         sum
-    }
-}
-
-/// Trait for converting samples into f64 in the range [0,1].
-pub trait AsF64: crate::true_peak::AsF32 + Copy + PartialOrd {
-    const MAX: f64;
-
-    fn as_f64(self) -> f64;
-}
-
-impl AsF64 for i16 {
-    const MAX: f64 = -(std::i16::MIN as f64);
-    fn as_f64(self) -> f64 {
-        self as f64
-    }
-}
-
-impl AsF64 for i32 {
-    const MAX: f64 = -(std::i32::MIN as f64);
-    fn as_f64(self) -> f64 {
-        self as f64
-    }
-}
-
-impl AsF64 for f32 {
-    const MAX: f64 = 1.0;
-    fn as_f64(self) -> f64 {
-        self as f64
-    }
-}
-
-impl AsF64 for f64 {
-    const MAX: f64 = 1.0;
-    fn as_f64(self) -> f64 {
-        self
     }
 }
 
@@ -543,7 +512,11 @@ mod tests {
             let mut data_out_tmp = vec![0.0f64; frames * signal.channels as usize];
 
             f.process(
-                &signal.data[..(frames * signal.channels as usize)],
+                &crate::Interleaved::new(
+                    &signal.data[..(frames * signal.channels as usize)],
+                    signal.channels as usize,
+                )
+                .unwrap(),
                 &mut data_out_tmp,
                 0,
                 &channel_map,
@@ -627,7 +600,11 @@ mod tests {
             let mut data_out_tmp = vec![0.0f64; frames * signal.channels as usize];
 
             f.process(
-                &signal.data[..(frames * signal.channels as usize)],
+                &crate::Interleaved::new(
+                    &signal.data[..(frames * signal.channels as usize)],
+                    signal.channels as usize,
+                )
+                .unwrap(),
                 &mut data_out_tmp,
                 0,
                 &channel_map,
@@ -711,7 +688,11 @@ mod tests {
             let mut data_out_tmp = vec![0.0f64; frames * signal.channels as usize];
 
             f.process(
-                &signal.data[..(frames * signal.channels as usize)],
+                &crate::Interleaved::new(
+                    &signal.data[..(frames * signal.channels as usize)],
+                    signal.channels as usize,
+                )
+                .unwrap(),
                 &mut data_out_tmp,
                 0,
                 &channel_map,
@@ -795,7 +776,11 @@ mod tests {
             let mut data_out_tmp = vec![0.0f64; frames * signal.channels as usize];
 
             f.process(
-                &signal.data[..(frames * signal.channels as usize)],
+                &crate::Interleaved::new(
+                    &signal.data[..(frames * signal.channels as usize)],
+                    signal.channels as usize,
+                )
+                .unwrap(),
                 &mut data_out_tmp,
                 0,
                 &channel_map,

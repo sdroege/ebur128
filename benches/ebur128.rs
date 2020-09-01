@@ -109,16 +109,6 @@ pub fn criterion_benchmark(c: &mut Criterion) {
         #[cfg(feature = "c-tests")]
         let mode_c = *mode_c;
 
-        let mut data = vec![0i16; 48_000 * 5 * 2];
-        let mut accumulator = 0.0;
-        let step = 2.0 * std::f32::consts::PI * 440.0 / 48_000.0;
-        for out in data.chunks_exact_mut(2) {
-            let val = f32::sin(accumulator) * (std::i16::MAX - 1) as f32;
-            out[0] = val as i16;
-            out[1] = val as i16;
-            accumulator += step;
-        }
-
         let mut group = c.benchmark_group(format!("ebur128 create: 48kHz 2ch {}", name));
 
         #[cfg(feature = "c-tests")]
@@ -140,6 +130,23 @@ pub fn criterion_benchmark(c: &mut Criterion) {
 
         group.finish();
 
+        let mut data = vec![0i16; 48_000 * 5 * 2];
+        let mut data_planar = vec![0i16; 48_000 * 5 * 2];
+        let (fst, snd) = data_planar.split_at_mut(48_000 * 5);
+        let mut accumulator = 0.0;
+        let step = 2.0 * std::f32::consts::PI * 440.0 / 48_000.0;
+        for (out, (fst, snd)) in data
+            .chunks_exact_mut(2)
+            .zip(fst.iter_mut().zip(snd.iter_mut()))
+        {
+            let val = f32::sin(accumulator) * std::i16::MAX as f32;
+            out[0] = val as i16;
+            out[1] = val as i16;
+            *fst = val as i16;
+            *snd = val as i16;
+            accumulator += step;
+        }
+
         let mut group = c.benchmark_group(format!("ebur128 process: 48kHz i16 2ch {}", name));
 
         #[cfg(feature = "c-tests")]
@@ -154,7 +161,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
                 })
             });
         }
-        group.bench_function("Rust", |b| {
+        group.bench_function("Rust/Interleaved", |b| {
             b.iter(|| {
                 let mut ebu =
                     EbuR128::new(black_box(2), black_box(48_000), black_box(mode)).unwrap();
@@ -163,16 +170,32 @@ pub fn criterion_benchmark(c: &mut Criterion) {
                 get_results(&ebu, black_box(mode));
             })
         });
+        group.bench_function("Rust/Planar", |b| {
+            b.iter(|| {
+                let mut ebu =
+                    EbuR128::new(black_box(2), black_box(48_000), black_box(mode)).unwrap();
+                ebu.add_frames_planar_i16(&[fst, snd]).unwrap();
+
+                get_results(&ebu, black_box(mode));
+            })
+        });
 
         group.finish();
 
         let mut data = vec![0i32; 48_000 * 5 * 2];
+        let mut data_planar = vec![0i32; 48_000 * 5 * 2];
+        let (fst, snd) = data_planar.split_at_mut(48_000 * 5);
         let mut accumulator = 0.0;
         let step = 2.0 * std::f32::consts::PI * 440.0 / 48_000.0;
-        for out in data.chunks_exact_mut(2) {
-            let val = f32::sin(accumulator) * (std::i32::MAX - 1) as f32;
+        for (out, (fst, snd)) in data
+            .chunks_exact_mut(2)
+            .zip(fst.iter_mut().zip(snd.iter_mut()))
+        {
+            let val = f32::sin(accumulator) * std::i32::MAX as f32;
             out[0] = val as i32;
             out[1] = val as i32;
+            *fst = val as i32;
+            *snd = val as i32;
             accumulator += step;
         }
 
@@ -190,7 +213,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
                 })
             });
         }
-        group.bench_function("Rust", |b| {
+        group.bench_function("Rust/Interleaved", |b| {
             b.iter(|| {
                 let mut ebu =
                     EbuR128::new(black_box(2), black_box(48_000), black_box(mode)).unwrap();
@@ -199,16 +222,32 @@ pub fn criterion_benchmark(c: &mut Criterion) {
                 get_results(&ebu, black_box(mode));
             })
         });
+        group.bench_function("Rust/Planar", |b| {
+            b.iter(|| {
+                let mut ebu =
+                    EbuR128::new(black_box(2), black_box(48_000), black_box(mode)).unwrap();
+                ebu.add_frames_planar_i32(&[fst, snd]).unwrap();
+
+                get_results(&ebu, black_box(mode));
+            })
+        });
 
         group.finish();
 
         let mut data = vec![0.0f32; 48_000 * 5 * 2];
+        let mut data_planar = vec![0.0f32; 48_000 * 5 * 2];
+        let (fst, snd) = data_planar.split_at_mut(48_000 * 5);
         let mut accumulator = 0.0;
         let step = 2.0 * std::f32::consts::PI * 440.0 / 48_000.0;
-        for out in data.chunks_exact_mut(2) {
+        for (out, (fst, snd)) in data
+            .chunks_exact_mut(2)
+            .zip(fst.iter_mut().zip(snd.iter_mut()))
+        {
             let val = f32::sin(accumulator);
             out[0] = val;
             out[1] = val;
+            *fst = val;
+            *snd = val;
             accumulator += step;
         }
 
@@ -226,7 +265,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
                 })
             });
         }
-        group.bench_function("Rust", |b| {
+        group.bench_function("Rust/Interleaved", |b| {
             b.iter(|| {
                 let mut ebu =
                     EbuR128::new(black_box(2), black_box(48_000), black_box(mode)).unwrap();
@@ -235,16 +274,32 @@ pub fn criterion_benchmark(c: &mut Criterion) {
                 get_results(&ebu, black_box(mode));
             })
         });
+        group.bench_function("Rust/Planar", |b| {
+            b.iter(|| {
+                let mut ebu =
+                    EbuR128::new(black_box(2), black_box(48_000), black_box(mode)).unwrap();
+                ebu.add_frames_planar_f32(&[fst, snd]).unwrap();
+
+                get_results(&ebu, black_box(mode));
+            })
+        });
 
         group.finish();
 
         let mut data = vec![0.0f64; 48_000 * 5 * 2];
+        let mut data_planar = vec![0.0f64; 48_000 * 5 * 2];
+        let (fst, snd) = data_planar.split_at_mut(48_000 * 5);
         let mut accumulator = 0.0;
         let step = 2.0 * std::f32::consts::PI * 440.0 / 48_000.0;
-        for out in data.chunks_exact_mut(2) {
+        for (out, (fst, snd)) in data
+            .chunks_exact_mut(2)
+            .zip(fst.iter_mut().zip(snd.iter_mut()))
+        {
             let val = f32::sin(accumulator);
             out[0] = val as f64;
             out[1] = val as f64;
+            *fst = val as f64;
+            *snd = val as f64;
             accumulator += step;
         }
 
@@ -262,11 +317,20 @@ pub fn criterion_benchmark(c: &mut Criterion) {
                 })
             });
         }
-        group.bench_function("Rust", |b| {
+        group.bench_function("Rust/Interleaved", |b| {
             b.iter(|| {
                 let mut ebu =
                     EbuR128::new(black_box(2), black_box(48_000), black_box(mode)).unwrap();
                 ebu.add_frames_f64(&data).unwrap();
+
+                get_results(&ebu, black_box(mode));
+            })
+        });
+        group.bench_function("Rust/Planar", |b| {
+            b.iter(|| {
+                let mut ebu =
+                    EbuR128::new(black_box(2), black_box(48_000), black_box(mode)).unwrap();
+                ebu.add_frames_planar_f64(&[fst, snd]).unwrap();
 
                 get_results(&ebu, black_box(mode));
             })

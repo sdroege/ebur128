@@ -1,4 +1,4 @@
-# ebur128 [![crates.io](https://img.shields.io/crates/v/ebur128.svg)](https://crates.io/crates/ebur128) [![Build Status](https://travis-ci.org/sdroege/ebur128.svg?branch=master)](https://travis-ci.org/sdroege/ebur128) [![docs.rs](https://docs.rs/ebur128/badge.svg)](https://docs.rs/ebur128)
+# ebur128 [![crates.io](https://img.shields.io/crates/v/ebur128.svg)](https://crates.io/crates/ebur128) [![Actions Status](https://github.com/sdroege/ebur128/workflows/ebur128/badge.svg)](https://github.com/sdroege/ebur128/actions) [![docs.rs](https://docs.rs/ebur128/badge.svg)](https://docs.rs/ebur128)
 
 Implementation of the [EBU R128 loudness standard](https://tech.ebu.ch/docs/r/r128.pdf).
 

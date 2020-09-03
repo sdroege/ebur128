@@ -1,0 +1,115 @@
+name: ebur128
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  rustfmt-clippy:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Install stable
+      uses: actions-rs/toolchain@v1
+      with:
+        profile: minimal
+        toolchain: stable
+        override: true
+        components: clippy, rustfmt
+
+    - name: Run rustfmt
+      uses: actions-rs/cargo@v1
+      with:
+        command: fmt
+        args: -- --check
+
+    - name: Run clippy
+      uses: actions-rs/clippy-check@v1
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        args: --all-targets --all-features -- -D warnings
+
+  cargo-c-tests:
+
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        toolchain: [stable, beta, nightly]
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Install valgrind
+      run: |
+        sudo apt-get install valgrind
+
+    - name: Install ${{ matrix.toolchain }}
+      uses: actions-rs/toolchain@v1
+      with:
+        profile: minimal
+        toolchain: ${{ matrix.toolchain }}
+        override: true
+
+    - name: Install cargo-c
+      env:
+        LINK: https://github.com/lu-zero/cargo-c/releases/download
+        CARGO_C_VERSION: 0.6.12
+      run: |
+        curl -L "$LINK/v$CARGO_C_VERSION/cargo-c-linux.tar.gz" |
+        tar xz -C $HOME/.cargo/bin
+
+    - name: Run cargo-c
+      run: |
+        cargo cinstall --prefix=$HOME/install
+
+    - name: Set pkg-config path
+      run: |
+        INSTALL_PATH=$HOME/install/lib/pkgconfig
+        echo "::set-env name=PKG_CONFIG_PATH::$INSTALL_PATH"
+
+    - name: Check capi
+      run: |
+        make -C capi-test check
+
+    - name: Check capi valgrind
+      run: |
+        make -C capi-test check-valgrind
+
+  ubuntu-tests:
+
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        toolchain: [stable, beta, nightly]
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Download samples
+      env:
+        LINK: https://tech.ebu.ch/files/live/sites/tech/files/shared
+      run: |
+        wget $LINK/testmaterial/ebu-loudness-test-setv05.zip
+        unzip -u ebu-loudness-test-setv05.zip -d tests/reference_files
+
+    - name: Install ${{ matrix.toolchain }}
+      uses: actions-rs/toolchain@v1
+      with:
+        profile: minimal
+        toolchain: ${{ matrix.toolchain }}
+        override: true
+
+    - name: Run tests
+      env:
+        QUICKCHECK_TESTS: 2
+      run: |
+        cargo test --features c-tests,internal-tests,reference-tests

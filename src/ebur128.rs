@@ -744,10 +744,12 @@ impl EbuR128 {
     }
 
     /// Get global integrated loudness in LUFS across multiple instances.
+    // FIXME: Should maybe be IntoIterator? Maybe AsRef<Self>?
     pub fn loudness_global_multiple<'a>(
         iter: impl Iterator<Item = &'a Self>,
     ) -> Result<f64, Error> {
-        // TODO: Maybe use SmallVec
+        use smallvec::SmallVec;
+
         let h = iter
             .map(|e| {
                 if !e.mode.contains(Mode::I) {
@@ -756,7 +758,7 @@ impl EbuR128 {
                     Ok(&e.block_energy_history)
                 }
             })
-            .collect::<Result<Vec<_>, _>>()?;
+            .collect::<Result<SmallVec<[_; 16]>, _>>()?;
 
         Ok(crate::history::History::gated_loudness_multiple(&*h))
     }
@@ -832,10 +834,12 @@ impl EbuR128 {
     /// Get loudness range (LRA) of programme in LU across multiple instances.
     ///
     /// Calculates loudness range according to EBU 3342.
+    // FIXME: Should maybe be IntoIterator? Maybe AsRef<Self>?
     pub fn loudness_range_multiple<'a>(
         iter: impl IntoIterator<Item = &'a Self>,
     ) -> Result<f64, Error> {
-        // TODO: Maybe use SmallVec
+        use smallvec::SmallVec;
+
         let h = iter
             .into_iter()
             .map(|e| {
@@ -845,7 +849,7 @@ impl EbuR128 {
                     Ok(&e.short_term_block_energy_history)
                 }
             })
-            .collect::<Result<Vec<_>, _>>()?;
+            .collect::<Result<SmallVec<[_; 16]>, _>>()?;
 
         crate::history::History::loudness_range_multiple(&*h).map_err(|_| Error::InvalidMode)
     }
@@ -1912,6 +1916,88 @@ mod tests {
         assert_float_eq!(
             ebu.relative_threshold().unwrap(),
             -10.682603991416554,
+            abs <= 0.000001
+        );
+    }
+
+    #[test]
+    fn sine_stereo_f32_multiple() {
+        let mut data = vec![0.0f32; 48_000 * 5 * 2];
+        let mut accumulator = 0.0;
+        let step = 2.0 * std::f32::consts::PI * 440.0 / 48_000.0;
+        for out in data.chunks_exact_mut(2) {
+            let val = f32::sin(accumulator);
+            out[0] = val;
+            out[1] = val;
+            accumulator += step;
+        }
+
+        let mut ebu1 = EbuR128::new(2, 48_000, Mode::all()).unwrap();
+        ebu1.add_frames_f32(&data).unwrap();
+
+        let mut data = vec![0.0f32; 48_000 * 5 * 2];
+        let mut accumulator = 0.0;
+        let step = 2.0 * std::f32::consts::PI * 880.0 / 48_000.0;
+        for out in data.chunks_exact_mut(2) {
+            let val = f32::sin(accumulator);
+            out[0] = 0.5 * val;
+            out[1] = 0.5 * val;
+            accumulator += step;
+        }
+
+        let mut ebu2 = EbuR128::new(2, 48_000, Mode::all()).unwrap();
+        ebu2.add_frames_f32(&data).unwrap();
+
+        assert_float_eq!(
+            EbuR128::loudness_global_multiple([&ebu1, &ebu2].iter().copied()).unwrap(),
+            -2.603757953612454,
+            abs <= 0.000001
+        );
+
+        assert_float_eq!(
+            EbuR128::loudness_range_multiple([&ebu1, &ebu2].iter().copied()).unwrap(),
+            5.599999999999995,
+            abs <= 0.000001
+        );
+    }
+
+    #[test]
+    fn sine_stereo_f32_no_histogram_multiple() {
+        let mut data = vec![0.0f32; 48_000 * 5 * 2];
+        let mut accumulator = 0.0;
+        let step = 2.0 * std::f32::consts::PI * 440.0 / 48_000.0;
+        for out in data.chunks_exact_mut(2) {
+            let val = f32::sin(accumulator);
+            out[0] = val;
+            out[1] = val;
+            accumulator += step;
+        }
+
+        let mut ebu1 = EbuR128::new(2, 48_000, Mode::all() & !Mode::HISTOGRAM).unwrap();
+        ebu1.add_frames_f32(&data).unwrap();
+
+        let mut data = vec![0.0f32; 48_000 * 5 * 2];
+        let mut accumulator = 0.0;
+        let step = 2.0 * std::f32::consts::PI * 880.0 / 48_000.0;
+        for out in data.chunks_exact_mut(2) {
+            let val = f32::sin(accumulator);
+            out[0] = 0.5 * val;
+            out[1] = 0.5 * val;
+            accumulator += step;
+        }
+
+        let mut ebu2 = EbuR128::new(2, 48_000, Mode::all() & !Mode::HISTOGRAM).unwrap();
+        ebu2.add_frames_f32(&data).unwrap();
+
+        assert_float_eq!(
+            EbuR128::loudness_global_multiple([&ebu1, &ebu2].iter().copied()).unwrap(),
+            -2.6302830567858275,
+            abs <= 0.000001
+        );
+
+        assert_float_eq!(
+            EbuR128::loudness_range_multiple([&ebu1, &ebu2].iter().copied()).unwrap(),
+            5.571749801957784,
             abs <= 0.000001
         );
     }

@@ -19,6 +19,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+use smallvec::SmallVec;
 use std::f64;
 
 /// Data structure for polyphase FIR interpolator
@@ -33,8 +34,7 @@ pub struct Interp {
     /// Size of delay buffer
     delay: usize,
     /// List of subfilters (one for each factor)
-    // TODO: Try with SmallVec
-    filter: Box<[Filter]>,
+    filter: SmallVec<[Filter; 4]>,
     /// List of delay buffers (one for each channel)
     z: Box<[f32]>,
     /// Current delay buffer index
@@ -54,7 +54,7 @@ impl Interp {
 
         // Initialize the filter memory
         // One subfilter per interpolation factor.
-        let mut filter = Vec::with_capacity(factor);
+        let mut filter = SmallVec::<[_; 4]>::new();
 
         for _ in 0..factor {
             filter.push(vec![]);

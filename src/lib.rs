@@ -73,4 +73,5 @@ pub mod tests {
 }
 
 #[cfg(feature = "capi")]
+#[allow(clippy::missing_safety_doc)]
 pub mod capi;

@@ -439,6 +439,7 @@ mod tests {
     use float_eq::assert_float_eq;
     use quickcheck_macros::quickcheck;
 
+    #[allow(clippy::too_many_arguments)]
     fn compare_results(
         calculate_sample_peak: bool,
         calculate_true_peak: bool,

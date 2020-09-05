@@ -451,8 +451,6 @@ fn seq_3341_12() {
 }
 
 #[test]
-#[ignore]
-// FIXME: thread 'seq_3341_13' panicked at '2: -23.216378154131057 != -23', tests/reference_tests.rs:334:9
 fn seq_3341_13() {
     for i in 1..=20 {
         let (mut e, samples) = prepare_file!(
@@ -467,9 +465,9 @@ fn seq_3341_13() {
             [ebur128::Channel::Left, ebur128::Channel::Right]
         );
 
-        // 100ms chunks / 10Hz
+        // 10ms chunks / 100Hz
         let mut max_loudness = f64::MIN;
-        for chunk in samples.chunks(2 * 48_000 / 10) {
+        for chunk in samples.chunks(2 * 48_000 / 100) {
             e.add_frames_i32(chunk).expect("Failed to analyze samples");
 
             let loudness = e
@@ -485,8 +483,6 @@ fn seq_3341_13() {
 }
 
 #[test]
-#[ignore]
-// FIXME: thread 'seq_3341_14' panicked at '1: -37.21636093559276 != -37', tests/reference_tests.rs:366:13
 fn seq_3341_14() {
     let (mut e, samples) = prepare_file!(
         "seq-3341-14-24bit.wav.wav",
@@ -496,9 +492,9 @@ fn seq_3341_14() {
         [ebur128::Channel::Left, ebur128::Channel::Right]
     );
 
-    // 100ms chunks / 10Hz
+    // 10ms chunks / 100Hz
     let mut max_loudness = f64::MIN;
-    for (i, chunk) in samples.chunks(2 * 48_000 / 10).enumerate() {
+    for (i, chunk) in samples.chunks(2 * 48_000 / 100).enumerate() {
         e.add_frames_i32(chunk).expect("Failed to analyze samples");
 
         let loudness = e
@@ -508,14 +504,14 @@ fn seq_3341_14() {
         if loudness > max_loudness {
             max_loudness = loudness;
         }
-        if (i + 1) % 8 == 0 {
-            let expected = -38.0 + ((i + 1) / 8 - 1) as f64;
+        if (i + 1) % 80 == 0 {
+            let expected = -38.0 + ((i + 1) / 80 - 1) as f64;
             float_eq::assert_float_eq!(
                 max_loudness,
                 expected,
                 abs <= 0.1,
                 "chunk {}",
-                (i + 1) / 8 - 1
+                (i + 1) / 80 - 1
             );
         }
     }

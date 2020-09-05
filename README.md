@@ -20,8 +20,8 @@ same results as the C library and has comparable performance.
 
 ## EBU TECH 3341/3342 Compliance
 
-Currently the implementation passes all tests defined in [EBU - TECH 3341](https://tech.ebu.ch/docs/tech/tech3341.pdf)
-and [EBU - TECH 3342](https://tech.ebu.ch/docs/tech/tech3342.pdf) except for [two](https://github.com/sdroege/ebur128/issues/10).
+Currently, the implementation passes all tests defined in [EBU - TECH 3341](https://tech.ebu.ch/docs/tech/tech3341.pdf)
+and [EBU - TECH 3342](https://tech.ebu.ch/docs/tech/tech3342.pdf).
 
 ## C API
 

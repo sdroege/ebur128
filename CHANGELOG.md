@@ -5,6 +5,28 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html),
 specifically the [variant used by Rust](http://doc.crates.io/manifest.html#the-version-field).
 
+## [Unreleased] - TBD
+
+## [0.1.5] - 2020-09-07
+### Fixed
+- Allow only a single channel when setting `DualMono` also in
+  `EbuR128::set_channel_map()`. The same constraint was already checked in
+  `set_channel()`.
+- Chunk size in some of the reference tests was changed as it was too big.
+  This fixed the remaining two reference tests that were failing before.
+
+### Added
+- `EbuR128::reset()` to reset all state without reallocation.
+- Support for planar/non-interleaved inputs.
+
+### Changed
+- Sample peak measurement was changed slightly and is now faster than the C
+  implementation while still giving the same results.
+- Use `SmallVec` for temporary vecs in `EbuR128::loudness_global_multiple()`
+  and `loudness_range_multiple()` to prevent heap allocations, and also use it
+  in the filter of the interpolator, which slightly speeds it up.
+- CI was switched from Travis to GitHub actions and greatly improved.
+
 ## [0.1.4] - 2020-08-31
 ### Fixed
 - Fix compiler warning about unused use statement in benchmarks
@@ -42,7 +64,8 @@ specifically the [variant used by Rust](http://doc.crates.io/manifest.html#the-v
 ## 0.1.0 - 2020-01-06
 - Initial release of ebur128.
 
-[Unreleased]: https://github.com/sdroege/rust-muldiv/compare/0.1.4...HEAD
+[Unreleased]: https://github.com/sdroege/rust-muldiv/compare/0.1.5...HEAD
+[0.1.5]: https://github.com/sdroege/ebur128/compare/0.1.4...0.1.5
 [0.1.4]: https://github.com/sdroege/ebur128/compare/0.1.3...0.1.4
 [0.1.3]: https://github.com/sdroege/ebur128/compare/0.1.2...0.1.3
 [0.1.2]: https://github.com/sdroege/ebur128/compare/0.1.1...0.1.2

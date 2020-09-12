@@ -24,37 +24,9 @@ use crate::energy_to_loudness;
 use std::collections::VecDeque;
 use std::fmt;
 
-// Not using lazy_static or similar here as that slows down every access considerably.
-// TODO: Make this const once f64::powf is a const function
-static mut HISTOGRAM_ENERGIES: [f64; 1000] = [0.0; 1000];
-static mut HISTOGRAM_ENERGY_BOUNDARIES: [f64; 1001] = [0.0; 1001];
-
-fn init_histogram() {
-    use std::sync::Once;
-    static ONCE: Once = Once::new();
-
-    // Safety: This is called once on the first History::new() call and
-    // afterwards the two arrays are only ever used immutably.
-    ONCE.call_once(|| unsafe {
-        for (i, o) in HISTOGRAM_ENERGIES.iter_mut().enumerate() {
-            *o = f64::powf(10.0, (i as f64 / 10.0 - 69.95 + 0.691) / 10.0);
-        }
-
-        for (i, o) in HISTOGRAM_ENERGY_BOUNDARIES.iter_mut().enumerate() {
-            *o = f64::powf(10.0, (i as f64 / 10.0 - 70.0 + 0.691) / 10.0);
-        }
-    });
-}
-
-fn histogram_energy_boundaries() -> &'static [f64; 1001] {
-    // Safety: See init_histogram().
-    unsafe { &HISTOGRAM_ENERGY_BOUNDARIES }
-}
-
-fn histogram_energies() -> &'static [f64; 1000] {
-    // Safety: See init_histogram().
-    unsafe { &HISTOGRAM_ENERGIES }
-}
+// TODO: Create this at compile-time once f64::powf is a const function
+use crate::histogram_bins::BOUNDARIES as HISTOGRAM_BOUNDARIES;
+use crate::histogram_bins::ENERGIES as HISTOGRAM_ENERGIES;
 
 fn find_histogram_index(energy: f64) -> usize {
     let mut min = 0;
@@ -63,7 +35,7 @@ fn find_histogram_index(energy: f64) -> usize {
     // Binary search
     loop {
         let mid = (min + max) / 2;
-        if energy >= histogram_energy_boundaries()[mid] {
+        if energy >= HISTOGRAM_BOUNDARIES[mid] {
             min = mid;
         } else {
             max = mid;
@@ -77,7 +49,7 @@ fn find_histogram_index(energy: f64) -> usize {
     min
 }
 
-/// Histogram of measured energies. See histogram_energy_boundaries() and histogram_energies() for
+/// Histogram of measured energies. See HISTOGRAM_BOUNDARIES and HISTOGRAM_ENERGIES for
 /// the bins of the histogram.
 pub struct Histogram(Box<[u64; 1000]>);
 
@@ -102,7 +74,7 @@ impl Histogram {
         let mut above_thresh_counter = 0;
         let mut relative_threshold = 0.0;
 
-        for (count, energy) in self.0.iter().zip(histogram_energies().iter()) {
+        for (count, energy) in self.0.iter().zip(HISTOGRAM_ENERGIES.iter()) {
             relative_threshold += *count as f64 * *energy;
             above_thresh_counter += *count;
         }
@@ -114,7 +86,7 @@ impl Histogram {
         let mut size = 0;
         let mut power = 0.0;
 
-        for (count, energy) in h.iter().zip(histogram_energies().iter()) {
+        for (count, energy) in h.iter().zip(HISTOGRAM_ENERGIES.iter()) {
             size += *count;
             power += *count as f64 * *energy;
         }
@@ -127,11 +99,11 @@ impl Histogram {
         let minus_twenty_decibels = f64::powf(10.0, -20.0 / 10.0);
         let integrated = minus_twenty_decibels * power;
 
-        let index = if integrated < histogram_energy_boundaries()[0] {
+        let index = if integrated < HISTOGRAM_BOUNDARIES[0] {
             0
         } else {
             let index = find_histogram_index(integrated);
-            if integrated > histogram_energies()[index] {
+            if integrated > HISTOGRAM_ENERGIES[index] {
                 index + 1
             } else {
                 index
@@ -152,13 +124,13 @@ impl Histogram {
             size += h[j];
             j += 1;
         }
-        let l_en = histogram_energies()[j - 1];
+        let l_en = HISTOGRAM_ENERGIES[j - 1];
 
         while size <= percentile_high {
             size += h[j];
             j += 1;
         }
-        let h_en = histogram_energies()[j - 1];
+        let h_en = HISTOGRAM_ENERGIES[j - 1];
 
         energy_to_loudness(h_en) - energy_to_loudness(l_en)
     }
@@ -250,8 +222,6 @@ impl fmt::Debug for History {
 
 impl History {
     pub fn new(use_histogram: bool, max: usize) -> Self {
-        init_histogram();
-
         if use_histogram {
             History::Histogram(Histogram::new())
         } else {
@@ -260,7 +230,7 @@ impl History {
     }
 
     pub fn add(&mut self, energy: f64) {
-        if energy < histogram_energy_boundaries()[0] {
+        if energy < HISTOGRAM_BOUNDARIES[0] {
             return;
         }
 
@@ -316,11 +286,11 @@ impl History {
         let mut above_thresh_counter = 0;
         let mut gated_loudness = 0.0;
 
-        let start_index = if relative_threshold < histogram_energy_boundaries()[0] {
+        let start_index = if relative_threshold < HISTOGRAM_BOUNDARIES[0] {
             0
         } else {
             let start_index = find_histogram_index(relative_threshold);
-            if relative_threshold > histogram_energies()[start_index] {
+            if relative_threshold > HISTOGRAM_ENERGIES[start_index] {
                 start_index + 1
             } else {
                 start_index
@@ -332,7 +302,7 @@ impl History {
                 History::Histogram(ref h) => {
                     for (count, energy) in h.0[start_index..]
                         .iter()
-                        .zip(histogram_energies()[start_index..].iter())
+                        .zip(HISTOGRAM_ENERGIES[start_index..].iter())
                     {
                         gated_loudness += *count as f64 * *energy;
                         above_thresh_counter += *count;

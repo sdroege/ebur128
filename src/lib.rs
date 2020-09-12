@@ -52,6 +52,9 @@ pub mod history;
 #[cfg(not(feature = "internal-tests"))]
 pub(crate) mod history;
 
+#[allow(clippy::excessive_precision)]
+mod histogram_bins;
+
 #[cfg(feature = "internal-tests")]
 pub mod filter;
 #[cfg(not(feature = "internal-tests"))]

@@ -24,70 +24,80 @@ use crate::energy_to_loudness;
 use std::collections::VecDeque;
 use std::fmt;
 
-// Not using lazy_static or similar here as that slows down every access considerably.
+use once_cell::sync::Lazy;
+
 // TODO: Make this const once f64::powf is a const function
-static mut HISTOGRAM_ENERGIES: [f64; 1000] = [0.0; 1000];
-static mut HISTOGRAM_ENERGY_BOUNDARIES: [f64; 1001] = [0.0; 1001];
+/// Histogram boundary energies and energies in the middle of each bin.
+struct HistogramMetadata {
+    energies: &'static [f64; 1000],
+    boundaries: &'static [f64; 1001],
+}
 
-fn init_histogram() {
-    use std::sync::Once;
-    static ONCE: Once = Once::new();
+// XXX: This is a bit convoluted and passed around/stored everywhere to prevent going through the
+// atomic operation of dereferencing Lazy in hot code paths, which speeds up the histogram mode by
+// a factor of 1.3x.
+static HISTOGRAM_METADATA: Lazy<HistogramMetadata> = Lazy::new(|| {
+    static HISTOGRAM_ENERGIES: Lazy<[f64; 1000]> = Lazy::new(|| {
+        let mut energies = [0.0; 1000];
 
-    // Safety: This is called once on the first History::new() call and
-    // afterwards the two arrays are only ever used immutably.
-    ONCE.call_once(|| unsafe {
-        for (i, o) in HISTOGRAM_ENERGIES.iter_mut().enumerate() {
+        for (i, o) in energies.iter_mut().enumerate() {
             *o = f64::powf(10.0, (i as f64 / 10.0 - 69.95 + 0.691) / 10.0);
         }
 
-        for (i, o) in HISTOGRAM_ENERGY_BOUNDARIES.iter_mut().enumerate() {
+        energies
+    });
+
+    static HISTOGRAM_ENERGY_BOUNDARIES: Lazy<[f64; 1001]> = Lazy::new(|| {
+        let mut boundaries = [0.0; 1001];
+
+        for (i, o) in boundaries.iter_mut().enumerate() {
             *o = f64::powf(10.0, (i as f64 / 10.0 - 70.0 + 0.691) / 10.0);
         }
+
+        boundaries
     });
-}
 
-fn histogram_energy_boundaries() -> &'static [f64; 1001] {
-    // Safety: See init_histogram().
-    unsafe { &HISTOGRAM_ENERGY_BOUNDARIES }
-}
-
-fn histogram_energies() -> &'static [f64; 1000] {
-    // Safety: See init_histogram().
-    unsafe { &HISTOGRAM_ENERGIES }
-}
-
-fn find_histogram_index(energy: f64) -> usize {
-    let mut min = 0;
-    let mut max = 1000;
-
-    // Binary search
-    loop {
-        let mid = (min + max) / 2;
-        if energy >= histogram_energy_boundaries()[mid] {
-            min = mid;
-        } else {
-            max = mid;
-        }
-
-        if max - min == 1 {
-            break;
-        }
+    HistogramMetadata {
+        energies: &*HISTOGRAM_ENERGIES,
+        boundaries: &*HISTOGRAM_ENERGY_BOUNDARIES,
     }
+});
 
-    min
+impl HistogramMetadata {
+    /// Return the bin for the given energy.
+    fn find_histogram_index(&self, energy: f64) -> usize {
+        let mut min = 0;
+        let mut max = 1000;
+
+        // Binary search
+        loop {
+            let mid = (min + max) / 2;
+            if energy >= self.boundaries[mid] {
+                min = mid;
+            } else {
+                max = mid;
+            }
+
+            if max - min == 1 {
+                break;
+            }
+        }
+
+        min
+    }
 }
 
 /// Histogram of measured energies. See histogram_energy_boundaries() and histogram_energies() for
 /// the bins of the histogram.
-pub struct Histogram(Box<[u64; 1000]>);
+pub struct Histogram(Box<[u64; 1000]>, &'static HistogramMetadata);
 
 impl Histogram {
-    fn new() -> Self {
-        Histogram(Box::new([0; 1000]))
+    fn new(metadata: &'static HistogramMetadata) -> Self {
+        Histogram(Box::new([0; 1000]), metadata)
     }
 
     fn add(&mut self, energy: f64) {
-        let idx = find_histogram_index(energy);
+        let idx = self.1.find_histogram_index(energy);
         self.0[idx] += 1;
     }
 
@@ -102,7 +112,7 @@ impl Histogram {
         let mut above_thresh_counter = 0;
         let mut relative_threshold = 0.0;
 
-        for (count, energy) in self.0.iter().zip(histogram_energies().iter()) {
+        for (count, energy) in self.0.iter().zip(self.1.energies.iter()) {
             relative_threshold += *count as f64 * *energy;
             above_thresh_counter += *count;
         }
@@ -110,11 +120,11 @@ impl Histogram {
         (above_thresh_counter, relative_threshold)
     }
 
-    fn loudness_range(h: &[u64; 1000]) -> f64 {
+    fn loudness_range(h: &[u64; 1000], m: &'static HistogramMetadata) -> f64 {
         let mut size = 0;
         let mut power = 0.0;
 
-        for (count, energy) in h.iter().zip(histogram_energies().iter()) {
+        for (count, energy) in h.iter().zip(m.energies.iter()) {
             size += *count;
             power += *count as f64 * *energy;
         }
@@ -127,11 +137,11 @@ impl Histogram {
         let minus_twenty_decibels = f64::powf(10.0, -20.0 / 10.0);
         let integrated = minus_twenty_decibels * power;
 
-        let index = if integrated < histogram_energy_boundaries()[0] {
+        let index = if integrated < m.boundaries[0] {
             0
         } else {
-            let index = find_histogram_index(integrated);
-            if integrated > histogram_energies()[index] {
+            let index = m.find_histogram_index(integrated);
+            if integrated > m.energies[index] {
                 index + 1
             } else {
                 index
@@ -152,13 +162,13 @@ impl Histogram {
             size += h[j];
             j += 1;
         }
-        let l_en = histogram_energies()[j - 1];
+        let l_en = m.energies[j - 1];
 
         while size <= percentile_high {
             size += h[j];
             j += 1;
         }
-        let h_en = histogram_energies()[j - 1];
+        let h_en = m.energies[j - 1];
 
         energy_to_loudness(h_en) - energy_to_loudness(l_en)
     }
@@ -234,60 +244,66 @@ impl Queue {
 }
 
 /// History of measured energies, either as histogram or a vector.
-pub enum History {
+pub struct History {
+    metadata: &'static HistogramMetadata,
+    inner: HistoryInner,
+}
+
+enum HistoryInner {
     Queue(Queue),
     Histogram(Histogram),
 }
 
 impl fmt::Debug for History {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            History::Histogram(..) => f.debug_struct("History::Histogram").finish(),
-            History::Queue(..) => f.debug_struct("History::Queue").finish(),
+        match self.inner {
+            HistoryInner::Histogram(..) => f.debug_struct("History::Histogram").finish(),
+            HistoryInner::Queue(..) => f.debug_struct("History::Queue").finish(),
         }
     }
 }
 
 impl History {
     pub fn new(use_histogram: bool, max: usize) -> Self {
-        init_histogram();
-
-        if use_histogram {
-            History::Histogram(Histogram::new())
-        } else {
-            History::Queue(Queue::new(max))
+        History {
+            metadata: &*HISTOGRAM_METADATA,
+            inner: if use_histogram {
+                HistoryInner::Histogram(Histogram::new(&*HISTOGRAM_METADATA))
+            } else {
+                HistoryInner::Queue(Queue::new(max))
+            },
         }
     }
 
     pub fn add(&mut self, energy: f64) {
-        if energy < histogram_energy_boundaries()[0] {
+        if energy < self.metadata.boundaries[0] {
             return;
         }
 
-        match self {
-            History::Histogram(ref mut h) => h.add(energy),
-            History::Queue(ref mut q) => q.add(energy),
+        match self.inner {
+            HistoryInner::Histogram(ref mut h) => h.add(energy),
+            HistoryInner::Queue(ref mut q) => q.add(energy),
         }
     }
 
     pub fn set_max_size(&mut self, max: usize) {
-        match self {
-            History::Histogram(_) => (),
-            History::Queue(ref mut q) => q.set_max_size(max),
+        match self.inner {
+            HistoryInner::Histogram(_) => (),
+            HistoryInner::Queue(ref mut q) => q.set_max_size(max),
         }
     }
 
     pub fn reset(&mut self) {
-        match self {
-            History::Histogram(ref mut h) => h.reset(),
-            History::Queue(ref mut q) => q.reset(),
+        match self.inner {
+            HistoryInner::Histogram(ref mut h) => h.reset(),
+            HistoryInner::Queue(ref mut q) => q.reset(),
         }
     }
 
     fn calc_relative_threshold(&self) -> (u64, f64) {
-        match self {
-            History::Histogram(ref h) => h.calc_relative_threshold(),
-            History::Queue(ref q) => q.calc_relative_threshold(),
+        match self.inner {
+            HistoryInner::Histogram(ref h) => h.calc_relative_threshold(),
+            HistoryInner::Queue(ref q) => q.calc_relative_threshold(),
         }
     }
 
@@ -313,14 +329,16 @@ impl History {
         let relative_threshold =
             (relative_threshold / above_thresh_counter as f64) * relative_gate_factor;
 
+        let metadata = s[0].metadata;
+
         let mut above_thresh_counter = 0;
         let mut gated_loudness = 0.0;
 
-        let start_index = if relative_threshold < histogram_energy_boundaries()[0] {
+        let start_index = if relative_threshold < metadata.boundaries[0] {
             0
         } else {
-            let start_index = find_histogram_index(relative_threshold);
-            if relative_threshold > histogram_energies()[start_index] {
+            let start_index = metadata.find_histogram_index(relative_threshold);
+            if relative_threshold > metadata.energies[start_index] {
                 start_index + 1
             } else {
                 start_index
@@ -328,17 +346,17 @@ impl History {
         };
 
         for h in s {
-            match h {
-                History::Histogram(ref h) => {
+            match h.inner {
+                HistoryInner::Histogram(ref h) => {
                     for (count, energy) in h.0[start_index..]
                         .iter()
-                        .zip(histogram_energies()[start_index..].iter())
+                        .zip(metadata.energies[start_index..].iter())
                     {
                         gated_loudness += *count as f64 * *energy;
                         above_thresh_counter += *count;
                     }
                 }
-                History::Queue(ref q) => {
+                HistoryInner::Queue(ref q) => {
                     for v in q.queue.iter() {
                         if *v >= relative_threshold {
                             above_thresh_counter += 1;
@@ -382,8 +400,9 @@ impl History {
             return Ok(0.0);
         }
 
-        match s[0] {
-            History::Histogram(ref h) => {
+        let metadata = s[0].metadata;
+        match s[0].inner {
+            HistoryInner::Histogram(ref h) => {
                 let mut combined;
 
                 let combined = if s.len() == 1 {
@@ -392,8 +411,8 @@ impl History {
                     combined = [0; 1000];
 
                     for h in s {
-                        match h {
-                            History::Histogram(ref h) => {
+                        match h.inner {
+                            HistoryInner::Histogram(ref h) => {
                                 for (i, o) in h.0.iter().zip(combined.iter_mut()) {
                                     *o += *i;
                                 }
@@ -405,13 +424,13 @@ impl History {
                     &combined
                 };
 
-                Ok(Histogram::loudness_range(combined))
+                Ok(Histogram::loudness_range(combined, metadata))
             }
-            History::Queue(_) => {
+            HistoryInner::Queue(_) => {
                 let mut len = 0;
                 for h in s {
-                    match h {
-                        History::Queue(ref q) => {
+                    match h.inner {
+                        HistoryInner::Queue(ref q) => {
                             len += q.queue.len();
                         }
                         _ => return Err(()),
@@ -420,8 +439,8 @@ impl History {
 
                 let mut combined = Vec::with_capacity(len);
                 for h in s {
-                    match h {
-                        History::Queue(ref q) => {
+                    match h.inner {
+                        HistoryInner::Queue(ref q) => {
                             let (v1, v2) = q.queue.as_slices();
                             combined.extend_from_slice(v1);
                             combined.extend_from_slice(v2);

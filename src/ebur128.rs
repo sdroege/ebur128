@@ -258,6 +258,31 @@ const MAX_RATE: u32 = 2822400;
 const MAX_CHANNELS: u32 = 64;
 
 impl EbuR128 {
+    /// Allocate audio data buffer used by the filter and check if we can allocate enough memory
+    /// for it.
+    fn allocate_audio_data(channels: u32, rate: u32, window: usize) -> Result<Box<[f64]>, Error> {
+        let samples_in_100ms = (rate as usize + 5) / 10;
+
+        let mut audio_data_frames = (rate as usize).checked_mul(window).ok_or(Error::NoMem)? / 1000;
+        if audio_data_frames % samples_in_100ms != 0 {
+            // round up to multiple of samples_in_100ms
+            audio_data_frames = audio_data_frames
+                .checked_add(samples_in_100ms)
+                .ok_or(Error::NoMem)?
+                - (audio_data_frames % samples_in_100ms);
+        }
+
+        let audio_data = vec![
+            0.0;
+            audio_data_frames
+                .checked_mul(channels as usize)
+                .ok_or(Error::NoMem)?
+        ]
+        .into_boxed_slice();
+
+        Ok(audio_data)
+    }
+
     /// Create a new instance with the given configuration.
     pub fn new(channels: u32, rate: u32, mode: Mode) -> Result<Self, Error> {
         if channels == 0 || channels > MAX_CHANNELS {
@@ -282,22 +307,7 @@ impl EbuR128 {
             return Err(Error::InvalidMode);
         };
 
-        let mut audio_data_frames = (rate as usize).checked_mul(window).ok_or(Error::NoMem)? / 1000;
-        if audio_data_frames % samples_in_100ms != 0 {
-            // round up to multiple of samples_in_100ms
-            audio_data_frames = audio_data_frames
-                .checked_add(samples_in_100ms)
-                .ok_or(Error::NoMem)?
-                - (audio_data_frames % samples_in_100ms);
-        }
-
-        let audio_data = vec![
-            0.0;
-            audio_data_frames
-                .checked_mul(channels as usize)
-                .ok_or(Error::NoMem)?
-        ];
-
+        let audio_data = Self::allocate_audio_data(channels, rate, window)?;
         // start at the beginning of the buffer
         let audio_data_index = 0;
 
@@ -324,7 +334,7 @@ impl EbuR128 {
             mode,
             rate,
             channels,
-            audio_data: audio_data.into_boxed_slice(),
+            audio_data,
             audio_data_index,
             needed_frames,
             channel_map: channel_map.into_boxed_slice(),
@@ -437,27 +447,7 @@ impl EbuR128 {
             return Ok(());
         }
 
-        let samples_in_100ms = (rate as usize + 5) / 10;
-
-        let mut audio_data_frames = (rate as usize)
-            .checked_mul(self.window)
-            .ok_or(Error::NoMem)?
-            / 1000;
-        if audio_data_frames % samples_in_100ms != 0 {
-            // round up to multiple of samples_in_100ms
-            audio_data_frames = audio_data_frames
-                .checked_add(samples_in_100ms)
-                .ok_or(Error::NoMem)?
-                - (audio_data_frames % samples_in_100ms);
-        }
-
-        self.audio_data = vec![
-            0.0;
-            audio_data_frames
-                .checked_mul(channels as usize)
-                .ok_or(Error::NoMem)?
-        ]
-        .into_boxed_slice();
+        self.audio_data = Self::allocate_audio_data(channels, rate, self.window)?;
 
         if self.channels != channels {
             self.channels = channels;
@@ -468,7 +458,7 @@ impl EbuR128 {
 
         if self.rate != rate {
             self.rate = rate;
-            self.samples_in_100ms = samples_in_100ms;
+            self.samples_in_100ms = (rate as usize + 5) / 10;
         }
 
         self.filter = crate::filter::Filter::new(
@@ -506,25 +496,7 @@ impl EbuR128 {
             return Ok(());
         }
 
-        let mut audio_data_frames = (self.rate as usize)
-            .checked_mul(window as usize)
-            .ok_or(Error::NoMem)?
-            / 1000;
-        if audio_data_frames % self.samples_in_100ms != 0 {
-            // round up to multiple of samples_in_100ms
-            audio_data_frames = audio_data_frames
-                .checked_add(self.samples_in_100ms)
-                .ok_or(Error::NoMem)?
-                - (audio_data_frames % self.samples_in_100ms);
-        }
-
-        self.audio_data = vec![
-            0.0;
-            audio_data_frames
-                .checked_mul(self.channels as usize)
-                .ok_or(Error::NoMem)?
-        ]
-        .into_boxed_slice();
+        self.audio_data = Self::allocate_audio_data(self.channels, self.rate, window as usize)?;
         self.window = window as usize;
 
         // the first block needs 400ms of audio data

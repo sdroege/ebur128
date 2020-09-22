@@ -178,88 +178,88 @@ impl Filter {
         dest_index: usize,
         channel_map: &[crate::ebur128::Channel],
     ) {
-        let ftz = ftz::Ftz::new();
-
         assert!(dest.len() % self.channels as usize == 0);
         assert!(channel_map.len() == self.channels as usize);
         assert!(src.channels() == self.channels as usize);
         assert!(self.filter_state.len() == self.channels as usize);
 
-        if self.calculate_sample_peak {
-            assert!(self.sample_peak.len() == self.channels as usize);
+        ftz::with_ftz(|ftz| {
+            if self.calculate_sample_peak {
+                assert!(self.sample_peak.len() == self.channels as usize);
 
-            for (c, sample_peak) in self.sample_peak.iter_mut().enumerate() {
-                let mut max = 0.0;
+                for (c, sample_peak) in self.sample_peak.iter_mut().enumerate() {
+                    let mut max = 0.0;
+
+                    assert!(c < src.channels());
+
+                    src.foreach_sample(c, |sample| {
+                        let v = sample.as_f64().abs();
+                        if v > max {
+                            max = v;
+                        }
+                    });
+
+                    max /= T::MAX;
+                    if max > *sample_peak {
+                        *sample_peak = max;
+                    }
+                }
+            }
+
+            if let Some(ref mut tp) = self.tp {
+                assert!(self.true_peak.len() == self.channels as usize);
+                tp.check_true_peak(src, &mut *self.true_peak);
+            }
+
+            let dest_stride = dest.len() / self.channels as usize;
+            assert!(dest_index + src.frames() <= dest_stride);
+
+            for (c, (channel_map, dest)) in channel_map
+                .iter()
+                .zip(dest.chunks_exact_mut(dest_stride))
+                .enumerate()
+            {
+                if *channel_map == crate::ebur128::Channel::Unused {
+                    continue;
+                }
 
                 assert!(c < src.channels());
 
-                src.foreach_sample(c, |sample| {
-                    let v = sample.as_f64().abs();
-                    if v > max {
-                        max = v;
-                    }
+                let Filter {
+                    ref mut filter_state,
+                    ref a,
+                    ref b,
+                    ..
+                } = *self;
+                let filter_state = &mut filter_state[c];
+
+                src.foreach_sample_zipped(c, dest[dest_index..].iter_mut(), |src, dest| {
+                    filter_state[0] = src.as_f64_scaled()
+                        - a[1] * filter_state[1]
+                        - a[2] * filter_state[2]
+                        - a[3] * filter_state[3]
+                        - a[4] * filter_state[4];
+                    *dest = b[0] * filter_state[0]
+                        + b[1] * filter_state[1]
+                        + b[2] * filter_state[2]
+                        + b[3] * filter_state[3]
+                        + b[4] * filter_state[4];
+
+                    filter_state[4] = filter_state[3];
+                    filter_state[3] = filter_state[2];
+                    filter_state[2] = filter_state[1];
+                    filter_state[1] = filter_state[0];
                 });
 
-                max /= T::MAX;
-                if max > *sample_peak {
-                    *sample_peak = max;
-                }
-            }
-        }
-
-        if let Some(ref mut tp) = self.tp {
-            assert!(self.true_peak.len() == self.channels as usize);
-            tp.check_true_peak(src, &mut *self.true_peak);
-        }
-
-        let dest_stride = dest.len() / self.channels as usize;
-        assert!(dest_index + src.frames() <= dest_stride);
-
-        for (c, (channel_map, dest)) in channel_map
-            .iter()
-            .zip(dest.chunks_exact_mut(dest_stride))
-            .enumerate()
-        {
-            if *channel_map == crate::ebur128::Channel::Unused {
-                continue;
-            }
-
-            assert!(c < src.channels());
-
-            let Filter {
-                ref mut filter_state,
-                ref a,
-                ref b,
-                ..
-            } = *self;
-            let filter_state = &mut filter_state[c];
-
-            src.foreach_sample_zipped(c, dest[dest_index..].iter_mut(), |src, dest| {
-                filter_state[0] = src.as_f64_scaled()
-                    - a[1] * filter_state[1]
-                    - a[2] * filter_state[2]
-                    - a[3] * filter_state[3]
-                    - a[4] * filter_state[4];
-                *dest = b[0] * filter_state[0]
-                    + b[1] * filter_state[1]
-                    + b[2] * filter_state[2]
-                    + b[3] * filter_state[3]
-                    + b[4] * filter_state[4];
-
-                filter_state[4] = filter_state[3];
-                filter_state[3] = filter_state[2];
-                filter_state[2] = filter_state[1];
-                filter_state[1] = filter_state[0];
-            });
-
-            if ftz.is_none() {
-                for v in filter_state {
-                    if v.abs() < std::f64::EPSILON {
-                        *v = 0.0;
+                if ftz.is_none() {
+                    for v in filter_state {
+                        if v.abs() < std::f64::EPSILON {
+                            *v = 0.0;
+                        }
                     }
                 }
             }
-        }
+        });
     }
 
     pub fn calc_gating_block(
@@ -343,14 +343,10 @@ mod ftz {
     pub struct Ftz(u32);
 
     impl Ftz {
-        pub fn new() -> Option<Self> {
-            unsafe {
-                let csr = _mm_getcsr();
-
-                _mm_setcsr(csr | _MM_FLUSH_ZERO_ON);
-
-                Some(Ftz(csr))
-            }
+        unsafe fn new() -> Self {
+            let csr = _mm_getcsr();
+            _mm_setcsr(csr | _MM_FLUSH_ZERO_ON);
+            Ftz(csr)
         }
     }
 
@@ -361,6 +357,15 @@ mod ftz {
             }
         }
     }
+
+    pub fn with_ftz<F: FnOnce(Option<&Ftz>) -> T, T>(func: F) -> T {
+        // Safety: MXCSR is unset in any case when Ftz goes out of scope and the closure also can't
+        // mem::forget() it to prevent running the Drop impl.
+        unsafe {
+            let ftz = Ftz::new();
+            func(Some(&ftz))
+        }
+    }
 }
 
 #[cfg(not(any(all(
@@ -368,12 +373,10 @@ mod ftz {
     target_feature = "sse2"
 )),))]
 mod ftz {
-    pub struct Ftz;
+    pub enum Ftz {}
 
-    impl Ftz {
-        pub fn new() -> Option<Self> {
-            None
-        }
+    pub fn with_ftz<F: FnOnce(Option<&Ftz>) -> T, T>(func: F) -> T {
+        func(None)
     }
 }
 

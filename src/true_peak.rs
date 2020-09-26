@@ -29,6 +29,7 @@ pub struct TruePeak {
     channels: u32,
     buffer_input: Vec<f32>,
     buffer_output: Vec<f32>,
+    peaks: Vec<f32>,
 }
 
 impl TruePeak {
@@ -45,6 +46,7 @@ impl TruePeak {
 
         let buffer_input = vec![0.0; 4 * samples_in_100ms as usize * channels as usize];
         let buffer_output = vec![0.0; buffer_input.len() * interp_factor];
+        let peaks = vec![0.0; channels as usize];
 
         Some(Self {
             interp,
@@ -53,6 +55,7 @@ impl TruePeak {
             channels,
             buffer_input,
             buffer_output,
+            peaks,
         })
     }
 
@@ -60,17 +63,14 @@ impl TruePeak {
     pub fn check_true_peak<T: AsF32>(&mut self, src: &[T], peaks: &mut [f64]) {
         assert!(src.len() <= self.buffer_input.len());
         assert!(peaks.len() == self.channels as usize);
+        assert!(self.peaks.len() == peaks.len());
 
         if src.is_empty() {
             return;
         }
 
-        // Deinterleave and convert to f32 for the resampler
-        let frames = src.len() / self.channels as usize;
-        for (s, i) in src.chunks_exact(self.channels as usize).enumerate() {
-            for (c, i) in i.iter().enumerate() {
-                self.buffer_input[frames * c + s] = i.as_f32();
-            }
+        for (o, i) in self.buffer_input.iter_mut().zip(src.iter()) {
+            *o = i.as_f32();
         }
 
         self.interp.process(
@@ -78,16 +78,20 @@ impl TruePeak {
             &mut self.buffer_output[..(src.len() * self.interp_factor)],
         );
 
-        // Find the maximum
-        for (c, o) in self.buffer_output[..(frames * self.channels as usize * self.interp_factor)]
-            .chunks_exact(frames * self.interp_factor)
-            .enumerate()
+        for o in &mut self.peaks {
+            *o = 0.0;
+        }
+
+        for o in self.buffer_output[..(src.len() * self.interp_factor)]
+            .chunks_exact(self.channels as usize)
         {
-            let mut max = 0.0;
-            for v in o {
-                max = f32_max(max, v.abs());
+            for (p, o) in self.peaks.iter_mut().zip(o.iter()) {
+                *p = f32_max(o.abs(), *p);
             }
-            peaks[c] = f64_max(max as f64, peaks[c]);
+        }
+
+        for (peak_out, peak_in) in peaks.iter_mut().zip(self.peaks.iter()) {
+            *peak_out = f64_max(*peak_out, *peak_in as f64);
         }
     }
 }

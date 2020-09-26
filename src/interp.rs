@@ -125,7 +125,7 @@ impl Interp {
                 // TODO Ringbuffer without bounds checks for z/zi
                 //
                 // Safety: zi is checked to be between 0 and self.delay
-                *unsafe { z.get_unchecked_mut(self.zi) } = *src;
+                z[self.zi] = *src;
 
                 // Apply coefficients
                 for (filter, dst) in self
@@ -140,13 +140,13 @@ impl Interp {
                             i += self.delay as i32;
                         }
                         // Safety: zi is checked to be between 0 and self.delay
-                        acc += *unsafe { z.get_unchecked(i as usize) } as f64 * c;
+                        acc += z[i as usize] as f64 * c;
                     }
 
                     // TODO: Figure out how to get rid of the bounds check here
                     //
                     // Safety: chan is by construction between 0 and self.channels
-                    *unsafe { dst.get_unchecked_mut(chan as usize) } = acc as f32;
+                    dst[chan as usize] = acc as f32;
                 }
             }
             self.zi += 1;

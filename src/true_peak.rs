@@ -24,6 +24,7 @@ use crate::interp::Interp;
 #[derive(Debug)]
 pub struct TruePeak {
     interp: Interp,
+    interp_factor: usize,
     rate: u32,
     channels: u32,
     buffer_input: Vec<f32>,
@@ -47,6 +48,7 @@ impl TruePeak {
 
         Some(Self {
             interp,
+            interp_factor,
             rate,
             channels,
             buffer_input,
@@ -57,8 +59,6 @@ impl TruePeak {
     // FIXME: Use f32 for storage
     pub fn check_true_peak<T: AsF32>(&mut self, src: &[T], peaks: &mut [f64]) {
         assert!(src.len() <= self.buffer_input.len());
-        assert!(src.len() * self.interp.get_factor() <= self.buffer_output.len());
-        assert!(self.buffer_input.len() * self.interp.get_factor() == self.buffer_output.len());
         assert!(peaks.len() == self.channels as usize);
 
         if src.is_empty() {
@@ -69,21 +69,18 @@ impl TruePeak {
         let frames = src.len() / self.channels as usize;
         for (s, i) in src.chunks_exact(self.channels as usize).enumerate() {
             for (c, i) in i.iter().enumerate() {
-                // Safety: self.buffer_input.len() >= src.len() and we just reorder
-                *unsafe { self.buffer_input.get_unchecked_mut(frames * c + s) } = i.as_f32();
+                self.buffer_input[frames * c + s] = i.as_f32();
             }
         }
 
-        let interp_factor = self.interp.get_factor();
-
         self.interp.process(
             &self.buffer_input[..(src.len())],
-            &mut self.buffer_output[..(src.len() * interp_factor)],
+            &mut self.buffer_output[..(src.len() * self.interp_factor)],
         );
 
         // Find the maximum
-        for (c, o) in self.buffer_output[..(frames * self.channels as usize * interp_factor)]
-            .chunks_exact(frames * interp_factor)
+        for (c, o) in self.buffer_output[..(frames * self.channels as usize * self.interp_factor)]
+            .chunks_exact(frames * self.interp_factor)
             .enumerate()
         {
             let mut max = 0.0;

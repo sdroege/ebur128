@@ -101,10 +101,6 @@ impl Interp {
         }
     }
 
-    pub fn get_factor(&self) -> usize {
-        self.factor
-    }
-
     pub fn process(&mut self, src: &[f32], dst: &mut [f32]) {
         assert!(src.len() * self.factor == dst.len());
         assert!(self.z.len() == self.delay * self.channels as usize);

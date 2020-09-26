@@ -171,11 +171,13 @@ impl Filter {
         if self.calculate_sample_peak {
             assert!(self.sample_peak.len() == self.channels as usize);
 
-            for frame in src.chunks_exact(self.channels as usize) {
-                for (c, sample) in frame.iter().enumerate() {
-                    let v = sample.as_f64().abs();
-                    if v > self.sample_peak[c] {
-                        self.sample_peak[c] = v;
+            for (c, peak) in self.sample_peak.iter_mut().enumerate() {
+                assert!(c < self.channels as usize);
+
+                for frame in src.chunks_exact(self.channels as usize) {
+                    let v = frame[c].as_f64().abs();
+                    if v > *peak {
+                        *peak = v;
                     }
                 }
             }

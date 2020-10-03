@@ -43,8 +43,8 @@ pub fn criterion_benchmark(c: &mut Criterion) {
         let channel_map = [ebur128::Channel::Left; 2];
         let mut data_out = vec![0.0f64; 19200 * 2];
         let mut data = vec![0i16; 19200 * 2];
-        let mut data_planar = vec![0i16; 48_000 * 5 * 2];
-        let (fst, snd) = data_planar.split_at_mut(48_000 * 5);
+        let mut data_planar = vec![0i16; 19200 * 2];
+        let (fst, snd) = data_planar.split_at_mut(19200);
         let mut accumulator = 0.0;
         let step = 2.0 * std::f32::consts::PI * 440.0 / 48_000.0;
         for (out, (fst, snd)) in data
@@ -107,8 +107,8 @@ pub fn criterion_benchmark(c: &mut Criterion) {
         group.finish();
 
         let mut data = vec![0i32; 19200 * 2];
-        let mut data_planar = vec![0i32; 48_000 * 5 * 2];
-        let (fst, snd) = data_planar.split_at_mut(48_000 * 5);
+        let mut data_planar = vec![0i32; 19200 * 2];
+        let (fst, snd) = data_planar.split_at_mut(19200);
         let mut accumulator = 0.0;
         let step = 2.0 * std::f32::consts::PI * 440.0 / 48_000.0;
         for (out, (fst, snd)) in data
@@ -171,8 +171,8 @@ pub fn criterion_benchmark(c: &mut Criterion) {
         group.finish();
 
         let mut data = vec![0.0f32; 19200 * 2];
-        let mut data_planar = vec![0.0f32; 48_000 * 5 * 2];
-        let (fst, snd) = data_planar.split_at_mut(48_000 * 5);
+        let mut data_planar = vec![0.0f32; 19200 * 2];
+        let (fst, snd) = data_planar.split_at_mut(19200);
         let mut accumulator = 0.0;
         let step = 2.0 * std::f32::consts::PI * 440.0 / 48_000.0;
         for (out, (fst, snd)) in data
@@ -235,8 +235,8 @@ pub fn criterion_benchmark(c: &mut Criterion) {
         group.finish();
 
         let mut data = vec![0.0f64; 19200 * 2];
-        let mut data_planar = vec![0.0f64; 48_000 * 5 * 2];
-        let (fst, snd) = data_planar.split_at_mut(48_000 * 5);
+        let mut data_planar = vec![0.0f64; 19200 * 2];
+        let (fst, snd) = data_planar.split_at_mut(19200);
         let mut accumulator = 0.0;
         let step = 2.0 * std::f32::consts::PI * 440.0 / 48_000.0;
         for (out, (fst, snd)) in data

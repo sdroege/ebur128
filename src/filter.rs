@@ -470,7 +470,8 @@ mod tests {
                 assert_float_eq!(
                     *r,
                     *c,
-                    ulps <= 2,
+                    // For a performance-boost, filter is defined as f32, causing slightly lower precision
+                    abs <= 0.000002,
                     "Rust and C implementation differ at true peak {}",
                     i
                 );

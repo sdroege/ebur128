@@ -202,7 +202,8 @@ mod tests {
             assert_float_eq!(
                 *r,
                 *c,
-                ulps <= 2,
+                // For a performance-boost, interpolation-filter is defined as f32, causing lower precision
+                abs <= 0.000002,
                 "Rust and C implementation differ at channel {}",
                 i,
             );
@@ -248,7 +249,8 @@ mod tests {
             assert_float_eq!(
                 *r,
                 *c,
-                ulps <= 2,
+                // For a performance-boost, interpolation-filter is defined as f32, causing lower precision
+                abs <= 0.000002,
                 "Rust and C implementation differ at channel {}",
                 i
             );
@@ -294,7 +296,8 @@ mod tests {
             assert_float_eq!(
                 *r,
                 *c,
-                ulps <= 2,
+                // For a performance-boost, interpolation-filter is defined as f32, causing lower precision
+                abs <= 0.000002,
                 "Rust and C implementation differ at channel {}",
                 i
             );
@@ -340,7 +343,8 @@ mod tests {
             assert_float_eq!(
                 *r,
                 *c,
-                ulps <= 2,
+                // For a performance-boost, interpolation-filter is defined as f32, causing lower precision
+                abs <= 0.000002,
                 "Rust and C implementation differ at channel {}",
                 i
             );

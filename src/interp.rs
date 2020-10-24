@@ -171,12 +171,13 @@ mod generic {
             }
 
             let frames = src.len() / self.channels as usize;
+            let mut zi = self.zi;
 
             for (src, (dst, z)) in src.chunks_exact(frames).zip(
                 dst.chunks_exact_mut(frames * self.factor)
                     .zip(self.z.chunks_exact_mut(self.delay)),
             ) {
-                let mut zi = self.zi;
+                zi = self.zi;
 
                 for (src, dst) in src.iter().zip(dst.chunks_exact_mut(self.factor)) {
                     // Add sample to delay buffer
@@ -190,10 +191,7 @@ mod generic {
                     for (filter, dst) in self.filter.iter().zip(dst.iter_mut()) {
                         let mut acc = 0.0;
                         for (c, index) in &*filter.coeff {
-                            let mut i = zi as i32 - *index as i32;
-                            if i < 0 {
-                                i += self.delay as i32;
-                            }
+                            let i = (zi as i32 + *index as i32) % self.delay as i32;
 
                             // Safety: zi is checked to be between 0 and self.delay
                             acc += *unsafe { z.get_unchecked(i as usize) } as f64 * c;
@@ -202,14 +200,11 @@ mod generic {
                         *dst = acc as f32;
                     }
 
-                    zi += 1;
-                    if zi == self.delay {
-                        zi = 0;
-                    }
+                    zi = (zi + self.delay - 1) % self.delay;
                 }
             }
 
-            self.zi = (self.zi + frames) % self.delay;
+            self.zi = zi;
         }
     }
 }

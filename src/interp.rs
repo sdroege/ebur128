@@ -236,7 +236,16 @@ impl Frame for MonoFrame32 {
 
     #[inline(always)]
     fn scale_add(&mut self, other: &Self, coeff: f32) {
-        self[0] += other[0] * coeff;
+        for i in 0..Self::CHANNELS {
+            #[cfg(feature = "precision-true-peak")]
+            {
+                self[i] = other[i].mul_add(coeff, self[i]);
+            }
+            #[cfg(not(feature = "precision-true-peak"))]
+            {
+                self[i] += other[i] * coeff;
+            }
+        }
     }
 
     #[inline(always)]
@@ -250,8 +259,16 @@ impl Frame for StereoFrame32 {
 
     #[inline(always)]
     fn scale_add(&mut self, other: &Self, coeff: f32) {
-        self[0] += other[0] * coeff;
-        self[1] += other[1] * coeff;
+        for i in 0..Self::CHANNELS {
+            #[cfg(feature = "precision-true-peak")]
+            {
+                self[i] = other[i].mul_add(coeff, self[i]);
+            }
+            #[cfg(not(feature = "precision-true-peak"))]
+            {
+                self[i] += other[i] * coeff;
+            }
+        }
     }
 
     #[inline(always)]
@@ -265,10 +282,16 @@ impl Frame for QuadFrame32 {
 
     #[inline(always)]
     fn scale_add(&mut self, other: &Self, coeff: f32) {
-        self[0] += other[0] * coeff;
-        self[1] += other[1] * coeff;
-        self[2] += other[2] * coeff;
-        self[3] += other[3] * coeff;
+        for i in 0..Self::CHANNELS {
+            #[cfg(feature = "precision-true-peak")]
+            {
+                self[i] = other[i].mul_add(coeff, self[i]);
+            }
+            #[cfg(not(feature = "precision-true-peak"))]
+            {
+                self[i] += other[i] * coeff;
+            }
+        }
     }
 
     #[inline(always)]
@@ -287,12 +310,16 @@ impl Frame for SurroundFrame32 {
 
     #[inline(always)]
     fn scale_add(&mut self, other: &Self, coeff: f32) {
-        self[0] += other[0] * coeff;
-        self[1] += other[1] * coeff;
-        self[2] += other[2] * coeff;
-        self[3] += other[3] * coeff;
-        self[4] += other[4] * coeff;
-        self[5] += other[5] * coeff;
+        for i in 0..Self::CHANNELS {
+            #[cfg(feature = "precision-true-peak")]
+            {
+                self[i] = other[i].mul_add(coeff, self[i]);
+            }
+            #[cfg(not(feature = "precision-true-peak"))]
+            {
+                self[i] += other[i] * coeff;
+            }
+        }
     }
 
     #[inline(always)]
@@ -313,14 +340,16 @@ impl Frame for Surround8Frame32 {
 
     #[inline(always)]
     fn scale_add(&mut self, other: &Self, coeff: f32) {
-        self[0] += other[0] * coeff;
-        self[1] += other[1] * coeff;
-        self[2] += other[2] * coeff;
-        self[3] += other[3] * coeff;
-        self[4] += other[4] * coeff;
-        self[5] += other[5] * coeff;
-        self[6] += other[6] * coeff;
-        self[7] += other[7] * coeff;
+        for i in 0..Self::CHANNELS {
+            #[cfg(feature = "precision-true-peak")]
+            {
+                self[i] = other[i].mul_add(coeff, self[i]);
+            }
+            #[cfg(not(feature = "precision-true-peak"))]
+            {
+                self[i] += other[i] * coeff;
+            }
+        }
     }
 
     #[inline(always)]

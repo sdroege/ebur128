@@ -33,6 +33,12 @@ c-tests = ["cc", "internal-tests"] # and ebur128-c, quickcheck, quickcheck_macro
 reference-tests = []
 capi = []
 
+# Enabling this increases the precision of true-peak calculation slightly, but causes a significant
+# performance-hit in the default build-configuration. To avoid the performance-hit, also enable
+# `RUSTFLAGS=-C target-feature=+fma`, assuming your platform supports it
+precision-true-peak = []
+
+
 [lib]
 name = "ebur128"
 

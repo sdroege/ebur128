@@ -21,6 +21,8 @@
 
 use crate::interp::Interp;
 
+use dasp_sample::{Sample, ToSample};
+
 /// True peak measurement.
 #[derive(Debug)]
 pub struct TruePeak {
@@ -66,7 +68,7 @@ impl TruePeak {
         self.interp.reset();
     }
 
-    pub fn check_true_peak<'a, T: crate::AsF32 + 'a, S: crate::Samples<'a, T>>(
+    pub fn check_true_peak<'a, T: Sample + ToSample<f32> + 'a, S: crate::Samples<'a, T>>(
         &mut self,
         src: &S,
         peaks: &mut [f64],
@@ -98,7 +100,7 @@ impl TruePeak {
             assert!(c < src.channels());
 
             src.foreach_sample_zipped(c, dest.iter_mut(), |src, dest| {
-                *dest = src.as_f32_scaled();
+                *dest = src.to_sample();
             });
         }
 

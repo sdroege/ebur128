@@ -215,121 +215,59 @@ impl<'a, T> Samples<'a, T> for Planar<'a, T> {
     }
 }
 
-/// Trait for converting samples into f32 in the range [0,1].
-pub trait AsF32: Copy {
-    fn as_f32_scaled(self) -> f32;
+pub trait Sample:
+    dasp_sample::Sample + dasp_sample::Duplex<f32> + dasp_sample::Duplex<f64>
+{
+    const MAX_AMPLITUDE: f64;
+
+    fn as_f64_raw(self) -> f64;
 }
 
-impl AsF32 for i16 {
-    #[inline]
-    fn as_f32_scaled(self) -> f32 {
-        self as f32 / (-(std::i16::MIN as f32))
-    }
-}
+impl Sample for f32 {
+    const MAX_AMPLITUDE: f64 = 1.0;
 
-impl AsF32 for i32 {
-    #[inline]
-    fn as_f32_scaled(self) -> f32 {
-        self as f32 / (-(std::i32::MIN as f32))
-    }
-}
-
-impl AsF32 for f32 {
-    #[inline]
-    fn as_f32_scaled(self) -> f32 {
-        self
-    }
-}
-
-impl AsF32 for f64 {
-    #[inline]
-    fn as_f32_scaled(self) -> f32 {
-        self as f32
-    }
-}
-
-/// Trait for converting samples into f64 in the range [0,1].
-pub trait AsF64: AsF32 + Copy + PartialOrd {
-    const MAX: f64;
-
-    fn as_f64(self) -> f64;
-
-    #[inline]
-    fn as_f64_scaled(self) -> f64 {
-        self.as_f64() / Self::MAX
-    }
-}
-
-impl AsF64 for i16 {
-    const MAX: f64 = -(std::i16::MIN as f64);
-    #[inline]
-    fn as_f64(self) -> f64 {
+    #[inline(always)]
+    fn as_f64_raw(self) -> f64 {
         self as f64
     }
 }
+impl Sample for f64 {
+    const MAX_AMPLITUDE: f64 = 1.0;
 
-impl AsF64 for i32 {
-    const MAX: f64 = -(std::i32::MIN as f64);
-    #[inline]
-    fn as_f64(self) -> f64 {
+    #[inline(always)]
+    fn as_f64_raw(self) -> f64 {
         self as f64
     }
 }
+impl Sample for i16 {
+    const MAX_AMPLITUDE: f64 = -(Self::MIN as f64);
 
-impl AsF64 for f32 {
-    const MAX: f64 = 1.0;
-    #[inline]
-    fn as_f64(self) -> f64 {
+    #[inline(always)]
+    fn as_f64_raw(self) -> f64 {
         self as f64
     }
 }
+impl Sample for i32 {
+    const MAX_AMPLITUDE: f64 = -(Self::MIN as f64);
 
-impl AsF64 for f64 {
-    const MAX: f64 = 1.0;
-    #[inline]
-    fn as_f64(self) -> f64 {
-        self
+    #[inline(always)]
+    fn as_f64_raw(self) -> f64 {
+        self as f64
     }
 }
 
 #[cfg(test)]
 pub mod tests {
+    use dasp_sample::{FromSample, Sample};
+
     #[derive(Clone, Debug)]
-    pub struct Signal<T: FromF32> {
+    pub struct Signal<T: FromSample<f32>> {
         pub data: Vec<T>,
         pub channels: u32,
         pub rate: u32,
     }
 
-    pub trait FromF32: Copy + Clone + std::fmt::Debug + Send + Sync + 'static {
-        fn from_f32(val: f32) -> Self;
-    }
-
-    impl FromF32 for i16 {
-        fn from_f32(val: f32) -> Self {
-            (val * (std::i16::MAX - 1) as f32) as i16
-        }
-    }
-
-    impl FromF32 for i32 {
-        fn from_f32(val: f32) -> Self {
-            (val * (std::i32::MAX - 1) as f32) as i32
-        }
-    }
-
-    impl FromF32 for f32 {
-        fn from_f32(val: f32) -> Self {
-            val
-        }
-    }
-
-    impl FromF32 for f64 {
-        fn from_f32(val: f32) -> Self {
-            val as f64
-        }
-    }
-
-    impl<T: FromF32 + quickcheck::Arbitrary> quickcheck::Arbitrary for Signal<T> {
+    impl<T: Sample + FromSample<f32> + quickcheck::Arbitrary> quickcheck::Arbitrary for Signal<T> {
         fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
             use rand::Rng;
 
@@ -359,7 +297,7 @@ pub mod tests {
                 2.0 * std::f32::consts::PI * freqs[3] / rate as f32,
             ];
 
-            let mut data = vec![T::from_f32(0.0); num_frames * channels as usize];
+            let mut data = vec![T::from_sample(0.0f32); num_frames * channels as usize];
             for frame in data.chunks_exact_mut(channels as usize) {
                 let val = max
                     * (f32::sin(accumulators[0]) * volumes[0]
@@ -369,7 +307,7 @@ pub mod tests {
                     / volume_scale;
 
                 for sample in frame.iter_mut() {
-                    *sample = T::from_f32(val);
+                    *sample = T::from_sample(val);
                 }
 
                 for (acc, step) in accumulators.iter_mut().zip(steps.iter()) {
@@ -389,7 +327,7 @@ pub mod tests {
         }
     }
 
-    struct SignalShrinker<A: FromF32> {
+    struct SignalShrinker<A: FromSample<f32>> {
         seed: Signal<A>,
         /// How many elements to take
         size: usize,
@@ -397,7 +335,7 @@ pub mod tests {
         tried_one_channel: bool,
     }
 
-    impl<A: FromF32 + quickcheck::Arbitrary> SignalShrinker<A> {
+    impl<A: FromSample<f32> + quickcheck::Arbitrary> SignalShrinker<A> {
         fn boxed(seed: Signal<A>) -> Box<dyn Iterator<Item = Signal<A>>> {
             let channels = seed.channels;
             Box::new(SignalShrinker {
@@ -410,7 +348,7 @@ pub mod tests {
 
     impl<A> Iterator for SignalShrinker<A>
     where
-        A: FromF32 + quickcheck::Arbitrary,
+        A: FromSample<f32> + quickcheck::Arbitrary,
     {
         type Item = Signal<A>;
         fn next(&mut self) -> Option<Signal<A>> {

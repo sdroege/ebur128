@@ -22,6 +22,7 @@
 use std::fmt;
 
 use crate::ebur128::Channel;
+use crate::utils::Sample;
 
 /// BS.1770 filter and optional sample/true peak measurement context.
 pub struct Filter {
@@ -171,7 +172,7 @@ impl Filter {
         &*self.true_peak
     }
 
-    pub fn process<'a, T: crate::AsF64 + 'a, S: crate::Samples<'a, T>>(
+    pub fn process<'a, T: Sample + 'a, S: crate::Samples<'a, T>>(
         &mut self,
         src: &S,
         dest: &mut [f64],
@@ -193,13 +194,13 @@ impl Filter {
                     assert!(c < src.channels());
 
                     src.foreach_sample(c, |sample| {
-                        let v = sample.as_f64().abs();
+                        let v = sample.as_f64_raw().abs();
                         if v > max {
                             max = v;
                         }
                     });
 
-                    max /= T::MAX;
+                    max /= T::MAX_AMPLITUDE;
                     if max > *sample_peak {
                         *sample_peak = max;
                     }
@@ -234,7 +235,7 @@ impl Filter {
                 let filter_state = &mut filter_state[c];
 
                 src.foreach_sample_zipped(c, dest[dest_index..].iter_mut(), |src, dest| {
-                    filter_state[0] = src.as_f64_scaled()
+                    filter_state[0] = (*src).to_sample::<f64>()
                         - a[1] * filter_state[1]
                         - a[2] * filter_state[2]
                         - a[3] * filter_state[3]

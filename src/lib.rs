@@ -66,9 +66,9 @@ pub mod utils;
 pub(crate) mod utils;
 
 #[cfg(feature = "internal-tests")]
-pub use utils::{energy_to_loudness, AsF32, AsF64, Interleaved, Planar, Samples};
+pub use utils::{energy_to_loudness, Interleaved, Planar, Samples};
 #[cfg(not(feature = "internal-tests"))]
-pub(crate) use utils::{energy_to_loudness, AsF32, AsF64, Interleaved, Planar, Samples};
+pub(crate) use utils::{energy_to_loudness, Interleaved, Planar, Samples};
 
 #[cfg(test)]
 pub mod tests {

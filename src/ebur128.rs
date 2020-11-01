@@ -20,6 +20,7 @@
 // THE SOFTWARE.
 
 use crate::energy_to_loudness;
+use crate::utils::Sample;
 
 use bitflags::bitflags;
 
@@ -572,7 +573,7 @@ impl EbuR128 {
 
     /// Process frames. This is the generic variant of the different public add_frames() functions
     /// that are defined below.
-    fn add_frames<'a, T: crate::AsF64 + 'a, S: crate::Samples<'a, T>>(
+    fn add_frames<'a, T: Sample + 'a, S: crate::Samples<'a, T>>(
         &mut self,
         mut src: S,
     ) -> Result<(), Error> {

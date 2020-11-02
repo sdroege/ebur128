@@ -21,7 +21,7 @@
 
 use crate::interp::Interp;
 
-use dasp_sample::{Sample, ToSample};
+use crate::utils::Sample;
 
 /// True peak measurement.
 #[derive(Debug)]
@@ -68,7 +68,7 @@ impl TruePeak {
         self.interp.reset();
     }
 
-    pub fn check_true_peak<'a, T: Sample + ToSample<f32> + 'a, S: crate::Samples<'a, T>>(
+    pub fn check_true_peak<'a, T: Sample + 'a, S: crate::Samples<'a, T>>(
         &mut self,
         src: &S,
         peaks: &mut [f64],

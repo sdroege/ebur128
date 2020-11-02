@@ -19,6 +19,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+use dasp_frame::Frame;
+
 /// Convert linear energy to logarithmic loudness.
 pub fn energy_to_loudness(energy: f64) -> f64 {
     // The non-test version is faster and more accurate but gives
@@ -35,11 +37,11 @@ pub fn energy_to_loudness(energy: f64) -> f64 {
 }
 
 /// Trait for abstracting over interleaved and planar samples.
-pub trait Samples<'a, T: 'a>: Sized {
+pub trait Samples<'a, S: Sample + 'a>: Sized {
     /// Call the given closure for each sample of the given channel.
     // FIXME: Workaround for TrustedLen / TrustedRandomAccess being unstable
     // and because of that we wouldn't get nice optimizations
-    fn foreach_sample(&self, channel: usize, func: impl FnMut(&'a T));
+    fn foreach_sample(&self, channel: usize, func: impl FnMut(&'a S));
 
     /// Call the given closure for each sample of the given channel.
     // FIXME: Workaround for TrustedLen / TrustedRandomAccess being unstable
@@ -48,8 +50,10 @@ pub trait Samples<'a, T: 'a>: Sized {
         &self,
         channel: usize,
         iter: impl Iterator<Item = U>,
-        func: impl FnMut(&'a T, U),
+        func: impl FnMut(&'a S, U),
     );
+
+    fn foreach_frame<F: Frame<Sample = S>>(&self, func: impl FnMut(F));
 
     /// Number of frames.
     fn frames(&self) -> usize;
@@ -62,16 +66,16 @@ pub trait Samples<'a, T: 'a>: Sized {
 }
 
 /// Struct representing interleaved samples.
-pub struct Interleaved<'a, T> {
+pub struct Interleaved<'a, S> {
     /// Interleaved sample data.
-    data: &'a [T],
+    data: &'a [S],
     /// Number of channels.
     channels: usize,
 }
 
-impl<'a, T> Interleaved<'a, T> {
+impl<'a, S> Interleaved<'a, S> {
     /// Create a new wrapper around the interleaved channels and do a sanity check.
-    pub fn new(data: &'a [T], channels: usize) -> Result<Self, crate::Error> {
+    pub fn new(data: &'a [S], channels: usize) -> Result<Self, crate::Error> {
         if channels == 0 {
             return Err(crate::Error::NoMem);
         }
@@ -84,9 +88,9 @@ impl<'a, T> Interleaved<'a, T> {
     }
 }
 
-impl<'a, T> Samples<'a, T> for Interleaved<'a, T> {
+impl<'a, S: Sample> Samples<'a, S> for Interleaved<'a, S> {
     #[inline]
-    fn foreach_sample(&self, channel: usize, mut func: impl FnMut(&'a T)) {
+    fn foreach_sample(&self, channel: usize, mut func: impl FnMut(&'a S)) {
         assert!(channel < self.channels);
 
         for v in self.data.chunks_exact(self.channels) {
@@ -99,12 +103,20 @@ impl<'a, T> Samples<'a, T> for Interleaved<'a, T> {
         &self,
         channel: usize,
         iter: impl Iterator<Item = U>,
-        mut func: impl FnMut(&'a T, U),
+        mut func: impl FnMut(&'a S, U),
     ) {
         assert!(channel < self.channels);
 
         for (v, u) in self.data.chunks_exact(self.channels).zip(iter) {
             func(&v[channel], u)
+        }
+    }
+
+    #[inline]
+    fn foreach_frame<F: Frame<Sample = S>>(&self, mut func: impl FnMut(F)) {
+        assert_eq!(F::CHANNELS, self.channels);
+        for f in self.data.chunks_exact(self.channels) {
+            func(F::from_samples(&mut f.iter().copied()).unwrap());
         }
     }
 
@@ -137,15 +149,15 @@ impl<'a, T> Samples<'a, T> for Interleaved<'a, T> {
 }
 
 /// Struct representing interleaved samples.
-pub struct Planar<'a, T> {
-    data: &'a [&'a [T]],
+pub struct Planar<'a, S> {
+    data: &'a [&'a [S]],
     start: usize,
     end: usize,
 }
 
-impl<'a, T> Planar<'a, T> {
+impl<'a, S> Planar<'a, S> {
     /// Create a new wrapper around the planar channels and do a sanity check.
-    pub fn new(data: &'a [&'a [T]]) -> Result<Self, crate::Error> {
+    pub fn new(data: &'a [&'a [S]]) -> Result<Self, crate::Error> {
         if data.is_empty() {
             return Err(crate::Error::NoMem);
         }
@@ -162,9 +174,9 @@ impl<'a, T> Planar<'a, T> {
     }
 }
 
-impl<'a, T> Samples<'a, T> for Planar<'a, T> {
+impl<'a, S: Sample> Samples<'a, S> for Planar<'a, S> {
     #[inline]
-    fn foreach_sample(&self, channel: usize, mut func: impl FnMut(&'a T)) {
+    fn foreach_sample(&self, channel: usize, mut func: impl FnMut(&'a S)) {
         assert!(channel < self.data.len());
 
         for v in &self.data[channel][self.start..self.end] {
@@ -177,12 +189,21 @@ impl<'a, T> Samples<'a, T> for Planar<'a, T> {
         &self,
         channel: usize,
         iter: impl Iterator<Item = U>,
-        mut func: impl FnMut(&'a T, U),
+        mut func: impl FnMut(&'a S, U),
     ) {
         assert!(channel < self.data.len());
 
         for (v, u) in self.data[channel][self.start..self.end].iter().zip(iter) {
             func(v, u)
+        }
+    }
+
+    #[inline]
+    fn foreach_frame<F: Frame<Sample = S>>(&self, mut func: impl FnMut(F)) {
+        let channels = self.data.len();
+        assert_eq!(F::CHANNELS, channels);
+        for f in self.start..self.end {
+            func(F::from_fn(|c| self.data[c][f]));
         }
     }
 
@@ -261,13 +282,13 @@ pub mod tests {
     use dasp_sample::{FromSample, Sample};
 
     #[derive(Clone, Debug)]
-    pub struct Signal<T: FromSample<f32>> {
-        pub data: Vec<T>,
+    pub struct Signal<S: FromSample<f32>> {
+        pub data: Vec<S>,
         pub channels: u32,
         pub rate: u32,
     }
 
-    impl<T: Sample + FromSample<f32> + quickcheck::Arbitrary> quickcheck::Arbitrary for Signal<T> {
+    impl<S: Sample + FromSample<f32> + quickcheck::Arbitrary> quickcheck::Arbitrary for Signal<S> {
         fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
             use rand::Rng;
 
@@ -297,7 +318,7 @@ pub mod tests {
                 2.0 * std::f32::consts::PI * freqs[3] / rate as f32,
             ];
 
-            let mut data = vec![T::from_sample(0.0f32); num_frames * channels as usize];
+            let mut data = vec![S::from_sample(0.0f32); num_frames * channels as usize];
             for frame in data.chunks_exact_mut(channels as usize) {
                 let val = max
                     * (f32::sin(accumulators[0]) * volumes[0]
@@ -307,7 +328,7 @@ pub mod tests {
                     / volume_scale;
 
                 for sample in frame.iter_mut() {
-                    *sample = T::from_sample(val);
+                    *sample = S::from_sample(val);
                 }
 
                 for (acc, step) in accumulators.iter_mut().zip(steps.iter()) {

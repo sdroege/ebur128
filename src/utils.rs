@@ -277,6 +277,85 @@ impl Sample for i32 {
     }
 }
 
+/// An extension-trait to accumulate samples into a frame
+pub trait FrameAccumulator: Frame {
+    fn scale_add(&mut self, other: &Self, coeff: f32);
+    fn retain_max_samples(&mut self, other: &Self);
+}
+
+impl<F: Frame, S> FrameAccumulator for F
+where
+    S: SampleAccumulator + std::fmt::Debug,
+    F: IndexMut<Target = S>,
+{
+    #[inline(always)]
+    fn scale_add(&mut self, other: &Self, coeff: f32) {
+        for i in 0..Self::CHANNELS {
+            self.index_mut(i).scale_add(*other.index(i), coeff);
+        }
+    }
+
+    fn retain_max_samples(&mut self, other: &Self) {
+        for i in 0..Self::CHANNELS {
+            let this = self.index_mut(i);
+            let other = other.index(i);
+            if *other > *this {
+                *this = *other;
+            }
+        }
+    }
+}
+
+// Required since std::ops::IndexMut seem to not be implemented for arrays
+// making FrameAcc hard to implement for auto-vectorization
+// IndexMut seems to be coming to stdlib, when https://github.com/rust-lang/rust/pull/74989
+// implemented, this trait can be removed
+pub trait IndexMut {
+    type Target;
+    fn index_mut(&mut self, i: usize) -> &mut Self::Target;
+    fn index(&self, i: usize) -> &Self::Target;
+}
+
+macro_rules! index_mut_impl {
+    ( $channels:expr ) => {
+        impl<T: SampleAccumulator> IndexMut for [T; $channels] {
+            type Target = T;
+            #[inline(always)]
+            fn index_mut(&mut self, i: usize) -> &mut Self::Target {
+                &mut self[i]
+            }
+            #[inline(always)]
+            fn index(&self, i: usize) -> &Self::Target {
+                &self[i]
+            }
+        }
+    };
+}
+
+index_mut_impl!(1);
+index_mut_impl!(2);
+index_mut_impl!(4);
+index_mut_impl!(6);
+index_mut_impl!(8);
+
+pub trait SampleAccumulator: Sample {
+    fn scale_add(&mut self, other: Self, coeff: f32);
+}
+
+impl SampleAccumulator for f32 {
+    #[inline(always)]
+    fn scale_add(&mut self, other: Self, coeff: f32) {
+        #[cfg(feature = "precision-true-peak")]
+        {
+            *self = other.mul_add(coeff, *self);
+        }
+        #[cfg(not(feature = "precision-true-peak"))]
+        {
+            *self += other * coeff
+        }
+    }
+}
+
 #[cfg(test)]
 pub mod tests {
     use dasp_sample::{FromSample, Sample};

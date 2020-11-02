@@ -19,49 +19,143 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-use crate::interp::Interp;
+use crate::interp::{Interp2F, Interp4F};
+use crate::utils::{FrameAccumulator, Sample};
+use dasp_frame::Frame;
 
-use crate::utils::Sample;
+use UpsamplingScanner::*;
+
+#[derive(Debug)]
+enum UpsamplingScanner {
+    Mono2F(Interp2F<[f32; 1]>),
+    Stereo2F(Interp2F<[f32; 2]>),
+    Quad2F(Interp2F<[f32; 4]>),
+    Surround2F(Interp2F<[f32; 6]>),
+    OctoSurround2F(Interp2F<[f32; 8]>),
+    Mono4F(Interp4F<[f32; 1]>),
+    Stereo4F(Interp4F<[f32; 2]>),
+    Quad4F(Interp4F<[f32; 4]>),
+    Surround4F(Interp4F<[f32; 6]>),
+    OctoSurround4F(Interp4F<[f32; 8]>),
+    Generic2F(Box<[Interp2F<[f32; 1]>]>),
+    Generic4F(Box<[Interp4F<[f32; 1]>]>),
+}
+
+impl UpsamplingScanner {
+    fn new(rate: u32, channels: u32) -> Option<Self> {
+        enum Factor {
+            Four,
+            Two,
+        }
+        let interp_factor = if rate < 96_000 {
+            Factor::Four
+        } else if rate < 192_000 {
+            Factor::Two
+        } else {
+            return None;
+        };
+
+        Some(match (channels as usize, interp_factor) {
+            (1, Factor::Two) => Mono2F(Interp2F::new()),
+            (2, Factor::Two) => Stereo2F(Interp2F::new()),
+            (4, Factor::Two) => Quad2F(Interp2F::new()),
+            (6, Factor::Two) => Surround2F(Interp2F::new()),
+            (8, Factor::Two) => OctoSurround2F(Interp2F::new()),
+            (1, Factor::Four) => Mono4F(Interp4F::new()),
+            (2, Factor::Four) => Stereo4F(Interp4F::new()),
+            (4, Factor::Four) => Quad4F(Interp4F::new()),
+            (6, Factor::Four) => Surround4F(Interp4F::new()),
+            (8, Factor::Four) => OctoSurround4F(Interp4F::new()),
+            (c, Factor::Two) => Generic2F(vec![Interp2F::new(); c].into()),
+            (c, Factor::Four) => Generic4F(vec![Interp4F::new(); c].into()),
+        })
+    }
+
+    pub fn check_true_peak<'a, T: Sample + 'a, S: crate::Samples<'a, T>>(
+        &mut self,
+        src: &S,
+        peaks: &mut [f64],
+    ) {
+        macro_rules! tp_specialized_impl {
+            ( $channels:expr, $interpolator:expr ) => {{
+                const CHANNELS: usize = $channels;
+                assert!(src.channels() == CHANNELS && peaks.len() == CHANNELS);
+                let mut tmp_peaks = <[f32; CHANNELS]>::from_fn(|i| peaks[i] as f32);
+
+                src.foreach_frame(|frame: [T; CHANNELS]| {
+                    let frame_f32: [f32; CHANNELS] = Frame::map(frame, |s| s.to_sample::<f32>());
+                    for new_frame in &$interpolator.interpolate(frame_f32) {
+                        tmp_peaks.retain_max_samples(&Frame::map(*new_frame, |s| s.abs()));
+                    }
+                });
+                for (dst, src) in Iterator::zip(peaks.into_iter(), &tmp_peaks) {
+                    *dst = *src as f64;
+                }
+            }};
+        }
+
+        macro_rules! tp_generic_impl {
+            ( $interpolators:expr ) => {{
+                assert!(src.channels() == $interpolators.len() && src.channels() == peaks.len());
+                for (c, (interpolator, channel_peak)) in
+                    Iterator::zip($interpolators.iter_mut(), peaks.iter_mut()).enumerate()
+                {
+                    src.foreach_sample(c, move |s| {
+                        for [new_sample] in &interpolator.interpolate([s.to_sample::<f32>()]) {
+                            let new_sample = new_sample.abs() as f64;
+                            if new_sample > *channel_peak {
+                                *channel_peak = new_sample;
+                            }
+                        }
+                    });
+                }
+            }};
+        }
+
+        match self {
+            Mono2F(interpolator) => tp_specialized_impl!(1, interpolator),
+            Stereo2F(interpolator) => tp_specialized_impl!(2, interpolator),
+            Quad2F(interpolator) => tp_specialized_impl!(4, interpolator),
+            Surround2F(interpolator) => tp_specialized_impl!(6, interpolator),
+            OctoSurround2F(interpolator) => tp_specialized_impl!(8, interpolator),
+            Mono4F(interpolator) => tp_specialized_impl!(1, interpolator),
+            Stereo4F(interpolator) => tp_specialized_impl!(2, interpolator),
+            Quad4F(interpolator) => tp_specialized_impl!(4, interpolator),
+            Surround4F(interpolator) => tp_specialized_impl!(6, interpolator),
+            OctoSurround4F(interpolator) => tp_specialized_impl!(8, interpolator),
+            Generic2F(interpolators) => tp_generic_impl!(interpolators),
+            Generic4F(interpolators) => tp_generic_impl!(interpolators),
+        }
+    }
+
+    fn reset(&mut self) {
+        match self {
+            Mono2F(interpolator) => interpolator.reset(),
+            Stereo2F(interpolator) => interpolator.reset(),
+            Quad2F(interpolator) => interpolator.reset(),
+            Surround2F(interpolator) => interpolator.reset(),
+            OctoSurround2F(interpolator) => interpolator.reset(),
+            Mono4F(interpolator) => interpolator.reset(),
+            Stereo4F(interpolator) => interpolator.reset(),
+            Quad4F(interpolator) => interpolator.reset(),
+            Surround4F(interpolator) => interpolator.reset(),
+            OctoSurround4F(interpolator) => interpolator.reset(),
+            Generic2F(interpolators) => interpolators.iter_mut().for_each(Interp2F::reset),
+            Generic4F(interpolators) => interpolators.iter_mut().for_each(Interp4F::reset),
+        }
+    }
+}
 
 /// True peak measurement.
 #[derive(Debug)]
 pub struct TruePeak {
     /// Interpolator/resampler.
-    interp: Interp,
-    /// Configured sample rate.
-    rate: u32,
-    /// Configured number of channels.
-    channels: u32,
-    /// Input buffer to which to processed data is first copied. This allows for 400ms
-    /// samples per channel, non-interleaved/planar.
-    buffer_input: Box<[f32]>,
-    /// Output buffer for the resampler. This allows for 400ms * resample factor samples.
-    buffer_output: Box<[f32]>,
+    interp: UpsamplingScanner,
 }
 
 impl TruePeak {
     pub fn new(rate: u32, channels: u32) -> Option<Self> {
-        let samples_in_100ms = (rate + 5) / 10;
-
-        let (interp, interp_factor) = if rate < 96_000 {
-            (Interp::new(49, 4, channels), 4)
-        } else if rate < 192_000 {
-            (Interp::new(49, 2, channels), 2)
-        } else {
-            return None;
-        };
-
-        let buffer_input =
-            vec![0.0; 4 * samples_in_100ms as usize * channels as usize].into_boxed_slice();
-        let buffer_output = vec![0.0; buffer_input.len() * interp_factor].into_boxed_slice();
-
-        Some(Self {
-            interp,
-            rate,
-            channels,
-            buffer_input,
-            buffer_output,
-        })
+        UpsamplingScanner::new(rate, channels).map(|interp| Self { interp })
     }
 
     pub fn reset(&mut self) {
@@ -73,61 +167,7 @@ impl TruePeak {
         src: &S,
         peaks: &mut [f64],
     ) {
-        assert!(src.channels() == self.channels as usize);
-        assert!(src.frames() * self.channels as usize <= self.buffer_input.len());
-        assert!(
-            src.frames() * self.channels as usize * self.interp.get_factor()
-                <= self.buffer_output.len()
-        );
-        assert!(self.buffer_input.len() * self.interp.get_factor() == self.buffer_output.len());
-        assert!(peaks.len() == self.channels as usize);
-
-        let frames = src.frames();
-
-        if frames == 0 {
-            return;
-        }
-
-        let in_len = frames * self.channels as usize;
-        let interp_factor = self.interp.get_factor();
-        let out_len = frames * self.channels as usize * interp_factor;
-
-        // Deinterleave and convert to f32 for the resampler
-        for (c, dest) in self.buffer_input[..in_len]
-            .chunks_exact_mut(frames)
-            .enumerate()
-        {
-            assert!(c < src.channels());
-
-            src.foreach_sample_zipped(c, dest.iter_mut(), |src, dest| {
-                *dest = src.to_sample();
-            });
-        }
-
-        self.interp.process(
-            &self.buffer_input[..in_len],
-            &mut self.buffer_output[..out_len],
-        );
-
-        // Find the maximum
-        for (c, o) in self.buffer_output[..out_len]
-            .chunks_exact(frames * interp_factor)
-            .enumerate()
-        {
-            assert!(c < self.channels as usize);
-
-            let mut max = 0.0;
-            for v in o {
-                let v = v.abs();
-                if v > max {
-                    max = v;
-                }
-            }
-
-            if max as f64 > peaks[c] {
-                peaks[c] = max as f64;
-            }
-        }
+        self.interp.check_true_peak(src, peaks)
     }
 }
 

@@ -31,11 +31,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
     }
     group.bench_function("Rust", |b| {
         b.iter(|| {
-            let interp = interp::Interp::new(
-                black_box(49),
-                black_box(data_out.len() / data.len()),
-                black_box(2),
-            );
+            let interp = interp::Interp2F::<[f32; 4]>::new();
             drop(black_box(interp));
         })
     });
@@ -59,14 +55,16 @@ pub fn criterion_benchmark(c: &mut Criterion) {
         interp::interp_destroy_c(interp);
     }
     {
-        let mut interp = interp::Interp::new(
-            black_box(49),
-            black_box(data_out.len() / data.len()),
-            black_box(2),
-        );
+        let mut interp = interp::Interp2F::new();
+        let (_, data, _) = unsafe { data.align_to::<[f32; 2]>() };
+        let (_, data_out, _) = unsafe { data_out.align_to_mut::<[f32; 2]>() };
         group.bench_function("Rust", |b| {
             b.iter(|| {
-                interp.process(&data, &mut data_out);
+                for (input_frame, output_frames) in
+                    Iterator::zip(data.iter(), data_out.chunks_exact_mut(2))
+                {
+                    output_frames.copy_from_slice(&interp.interpolate(*input_frame));
+                }
             })
         });
     }
@@ -91,14 +89,16 @@ pub fn criterion_benchmark(c: &mut Criterion) {
         interp::interp_destroy_c(interp);
     }
     {
-        let mut interp = interp::Interp::new(
-            black_box(49),
-            black_box(data_out.len() / data.len()),
-            black_box(2),
-        );
+        let mut interp = interp::Interp4F::new();
+        let (_, data, _) = unsafe { data.align_to::<[f32; 2]>() };
+        let (_, data_out, _) = unsafe { data_out.align_to_mut::<[f32; 2]>() };
         group.bench_function("Rust", |b| {
             b.iter(|| {
-                interp.process(&data, &mut data_out);
+                for (input_frame, output_frames) in
+                    Iterator::zip(data.iter(), data_out.chunks_exact_mut(4))
+                {
+                    output_frames.copy_from_slice(&interp.interpolate(*input_frame));
+                }
             })
         });
     }

@@ -471,7 +471,7 @@ mod tests {
                     *r,
                     *c,
                     // For a performance-boost, filter is defined as f32, causing slightly lower precision
-                    abs <= 0.000002,
+                    abs <= 0.000004,
                     "Rust and C implementation differ at true peak {}",
                     i
                 );

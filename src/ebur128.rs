@@ -2018,13 +2018,13 @@ mod tests {
                 ebu.true_peak(c).unwrap(),
                 ebu_c.true_peak(c).unwrap(),
                 // For a performance-boost, filter is defined as f32, causing slightly lower precision
-                abs <= 0.000002,
+                abs <= 0.000004,
             );
             assert_float_eq!(
                 ebu.prev_true_peak(c).unwrap(),
                 ebu_c.prev_true_peak(c).unwrap(),
                 // For a performance-boost, filter is defined as f32, causing slightly lower precision
-                abs <= 0.000002,
+                abs <= 0.000004,
             );
         }
 

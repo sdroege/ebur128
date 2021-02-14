@@ -74,7 +74,7 @@ impl Histogram {
         let mut above_thresh_counter = 0;
         let mut relative_threshold = 0.0;
 
-        for (count, energy) in self.0.iter().zip(HISTOGRAM_ENERGIES.iter()) {
+        for (count, energy) in Iterator::zip(self.0.iter(), HISTOGRAM_ENERGIES.iter()) {
             relative_threshold += *count as f64 * *energy;
             above_thresh_counter += *count;
         }
@@ -86,7 +86,7 @@ impl Histogram {
         let mut size = 0;
         let mut power = 0.0;
 
-        for (count, energy) in h.iter().zip(HISTOGRAM_ENERGIES.iter()) {
+        for (count, energy) in Iterator::zip(h.iter(), HISTOGRAM_ENERGIES.iter()) {
             size += *count;
             power += *count as f64 * *energy;
         }
@@ -298,10 +298,10 @@ impl History {
         for h in s {
             match h {
                 History::Histogram(ref h) => {
-                    for (count, energy) in h.0[start_index..]
-                        .iter()
-                        .zip(HISTOGRAM_ENERGIES[start_index..].iter())
-                    {
+                    for (count, energy) in Iterator::zip(
+                        h.0[start_index..].iter(),
+                        HISTOGRAM_ENERGIES[start_index..].iter(),
+                    ) {
                         gated_loudness += *count as f64 * *energy;
                         above_thresh_counter += *count;
                     }
@@ -362,7 +362,7 @@ impl History {
                     for h in s {
                         match h {
                             History::Histogram(ref h) => {
-                                for (i, o) in h.0.iter().zip(combined.iter_mut()) {
+                                for (i, o) in Iterator::zip(h.0.iter(), combined.iter_mut()) {
                                     *o += *i;
                                 }
                             }

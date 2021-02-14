@@ -215,10 +215,8 @@ impl Filter {
             let dest_stride = dest.len() / self.channels as usize;
             assert!(dest_index + src.frames() <= dest_stride);
 
-            for (c, (channel_map, dest)) in channel_map
-                .iter()
-                .zip(dest.chunks_exact_mut(dest_stride))
-                .enumerate()
+            for (c, (channel_map, dest)) in
+                Iterator::zip(channel_map.iter(), dest.chunks_exact_mut(dest_stride)).enumerate()
             {
                 if *channel_map == crate::ebur128::Channel::Unused {
                     continue;
@@ -276,10 +274,11 @@ impl Filter {
         let audio_data_stride = audio_data.len() / channels;
         assert!(audio_data_index <= audio_data_stride);
 
-        for (c, (channel, audio_data)) in channel_map
-            .iter()
-            .zip(audio_data.chunks_exact(audio_data_stride))
-            .enumerate()
+        for (c, (channel, audio_data)) in Iterator::zip(
+            channel_map.iter(),
+            audio_data.chunks_exact(audio_data_stride),
+        )
+        .enumerate()
         {
             if *channel == Channel::Unused {
                 continue;

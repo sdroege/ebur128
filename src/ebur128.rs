@@ -650,7 +650,7 @@ impl EbuR128 {
 
         let prev_sample_peak = self.filter.sample_peak();
         for (sample_peak, prev_sample_peak) in
-            self.sample_peak.iter_mut().zip(prev_sample_peak.iter())
+            Iterator::zip(self.sample_peak.iter_mut(), prev_sample_peak.iter())
         {
             if *prev_sample_peak > *sample_peak {
                 *sample_peak = *prev_sample_peak;
@@ -658,7 +658,9 @@ impl EbuR128 {
         }
 
         let prev_true_peak = self.filter.true_peak();
-        for (true_peak, prev_true_peak) in self.true_peak.iter_mut().zip(prev_true_peak.iter()) {
+        for (true_peak, prev_true_peak) in
+            Iterator::zip(self.true_peak.iter_mut(), prev_true_peak.iter())
+        {
             if *prev_true_peak > *true_peak {
                 *true_peak = *prev_true_peak;
             }
@@ -1583,7 +1585,7 @@ mod tests {
         let mut accumulator = 0.0;
         let step = 2.0 * std::f32::consts::PI * 440.0 / 48_000.0;
         let (fst, snd) = data.split_at_mut(48_000 * 5);
-        for (fst, snd) in fst.iter_mut().zip(snd.iter_mut()) {
+        for (fst, snd) in Iterator::zip(fst.iter_mut(), snd.iter_mut()) {
             let val = f32::sin(accumulator) * (std::i16::MAX - 1) as f32;
             *fst = val as i16;
             *snd = val as i16;
@@ -1674,7 +1676,7 @@ mod tests {
         let mut accumulator = 0.0;
         let step = 2.0 * std::f32::consts::PI * 440.0 / 48_000.0;
         let (fst, snd) = data.split_at_mut(48_000 * 5);
-        for (fst, snd) in fst.iter_mut().zip(snd.iter_mut()) {
+        for (fst, snd) in Iterator::zip(fst.iter_mut(), snd.iter_mut()) {
             let val = f32::sin(accumulator) * (std::i32::MAX - 1) as f32;
             *fst = val as i32;
             *snd = val as i32;
@@ -1749,7 +1751,7 @@ mod tests {
         let mut accumulator = 0.0;
         let step = 2.0 * std::f32::consts::PI * 440.0 / 48_000.0;
         let (fst, snd) = data.split_at_mut(48_000 * 5);
-        for (fst, snd) in fst.iter_mut().zip(snd.iter_mut()) {
+        for (fst, snd) in Iterator::zip(fst.iter_mut(), snd.iter_mut()) {
             let val = f32::sin(accumulator);
             *fst = val;
             *snd = val;
@@ -1824,7 +1826,7 @@ mod tests {
         let mut accumulator = 0.0;
         let step = 2.0 * std::f32::consts::PI * 440.0 / 48_000.0;
         let (fst, snd) = data.split_at_mut(48_000 * 5);
-        for (fst, snd) in fst.iter_mut().zip(snd.iter_mut()) {
+        for (fst, snd) in Iterator::zip(fst.iter_mut(), snd.iter_mut()) {
             let val = f32::sin(accumulator);
             *fst = val as f64;
             *snd = val as f64;

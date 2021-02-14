@@ -135,10 +135,10 @@ pub fn criterion_benchmark(c: &mut Criterion) {
         let (fst, snd) = data_planar.split_at_mut(48_000 * 5);
         let mut accumulator = 0.0;
         let step = 2.0 * std::f32::consts::PI * 440.0 / 48_000.0;
-        for (out, (fst, snd)) in data
-            .chunks_exact_mut(2)
-            .zip(fst.iter_mut().zip(snd.iter_mut()))
-        {
+        for (out, (fst, snd)) in Iterator::zip(
+            data.chunks_exact_mut(2),
+            Iterator::zip(fst.iter_mut(), snd.iter_mut()),
+        ) {
             let val = f32::sin(accumulator) * std::i16::MAX as f32;
             out[0] = val as i16;
             out[1] = val as i16;
@@ -187,10 +187,10 @@ pub fn criterion_benchmark(c: &mut Criterion) {
         let (fst, snd) = data_planar.split_at_mut(48_000 * 5);
         let mut accumulator = 0.0;
         let step = 2.0 * std::f32::consts::PI * 440.0 / 48_000.0;
-        for (out, (fst, snd)) in data
-            .chunks_exact_mut(2)
-            .zip(fst.iter_mut().zip(snd.iter_mut()))
-        {
+        for (out, (fst, snd)) in Iterator::zip(
+            data.chunks_exact_mut(2),
+            Iterator::zip(fst.iter_mut(), snd.iter_mut()),
+        ) {
             let val = f32::sin(accumulator) * std::i32::MAX as f32;
             out[0] = val as i32;
             out[1] = val as i32;
@@ -239,10 +239,10 @@ pub fn criterion_benchmark(c: &mut Criterion) {
         let (fst, snd) = data_planar.split_at_mut(48_000 * 5);
         let mut accumulator = 0.0;
         let step = 2.0 * std::f32::consts::PI * 440.0 / 48_000.0;
-        for (out, (fst, snd)) in data
-            .chunks_exact_mut(2)
-            .zip(fst.iter_mut().zip(snd.iter_mut()))
-        {
+        for (out, (fst, snd)) in Iterator::zip(
+            data.chunks_exact_mut(2),
+            Iterator::zip(fst.iter_mut(), snd.iter_mut()),
+        ) {
             let val = f32::sin(accumulator);
             out[0] = val;
             out[1] = val;
@@ -291,10 +291,10 @@ pub fn criterion_benchmark(c: &mut Criterion) {
         let (fst, snd) = data_planar.split_at_mut(48_000 * 5);
         let mut accumulator = 0.0;
         let step = 2.0 * std::f32::consts::PI * 440.0 / 48_000.0;
-        for (out, (fst, snd)) in data
-            .chunks_exact_mut(2)
-            .zip(fst.iter_mut().zip(snd.iter_mut()))
-        {
+        for (out, (fst, snd)) in Iterator::zip(
+            data.chunks_exact_mut(2),
+            Iterator::zip(fst.iter_mut(), snd.iter_mut()),
+        ) {
             let val = f32::sin(accumulator);
             out[0] = val as f64;
             out[1] = val as f64;

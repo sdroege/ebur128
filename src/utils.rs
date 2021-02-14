@@ -107,7 +107,7 @@ impl<'a, S: Sample> Samples<'a, S> for Interleaved<'a, S> {
     ) {
         assert!(channel < self.channels);
 
-        for (v, u) in self.data.chunks_exact(self.channels).zip(iter) {
+        for (v, u) in Iterator::zip(self.data.chunks_exact(self.channels), iter) {
             func(&v[channel], u)
         }
     }
@@ -193,7 +193,7 @@ impl<'a, S: Sample> Samples<'a, S> for Planar<'a, S> {
     ) {
         assert!(channel < self.data.len());
 
-        for (v, u) in self.data[channel][self.start..self.end].iter().zip(iter) {
+        for (v, u) in Iterator::zip(self.data[channel][self.start..self.end].iter(), iter) {
             func(v, u)
         }
     }

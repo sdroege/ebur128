@@ -19,7 +19,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-use crate::energy_to_loudness;
+use crate::{energy_to_loudness, Error};
 
 use std::collections::VecDeque;
 use std::fmt;
@@ -345,7 +345,7 @@ impl History {
         Self::loudness_range_multiple(&[self]).unwrap()
     }
 
-    pub fn loudness_range_multiple(s: &[&Self]) -> Result<f64, ()> {
+    pub fn loudness_range_multiple(s: &[&Self]) -> Result<f64, Error> {
         if s.is_empty() {
             return Ok(0.0);
         }
@@ -366,7 +366,7 @@ impl History {
                                     *o += *i;
                                 }
                             }
-                            _ => return Err(()),
+                            _ => return Err(Error::InvalidMode),
                         }
                     }
 
@@ -382,7 +382,7 @@ impl History {
                         History::Queue(ref q) => {
                             len += q.queue.len();
                         }
-                        _ => return Err(()),
+                        _ => return Err(Error::InvalidMode),
                     }
                 }
 
@@ -394,7 +394,7 @@ impl History {
                             combined.extend_from_slice(v1);
                             combined.extend_from_slice(v2);
                         }
-                        _ => return Err(()),
+                        _ => return Err(Error::InvalidMode),
                     }
                 }
 

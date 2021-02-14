@@ -824,7 +824,7 @@ impl EbuR128 {
             })
             .collect::<Result<SmallVec<[_; 16]>, _>>()?;
 
-        crate::history::History::loudness_range_multiple(&*h).map_err(|_| Error::InvalidMode)
+        crate::history::History::loudness_range_multiple(&*h)
     }
 
     /// Get maximum sample peak from all frames that have been processed.

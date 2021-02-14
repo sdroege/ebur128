@@ -74,7 +74,7 @@ jobs:
     - name: Set pkg-config path
       run: |
         INSTALL_PATH=$HOME/install/lib/pkgconfig
-        echo "::set-env name=PKG_CONFIG_PATH::$INSTALL_PATH"
+        echo "PKG_CONFIG_PATH=$INSTALL_PATH" >> $GITHUB_ENV
 
     - name: Check capi
       run: |

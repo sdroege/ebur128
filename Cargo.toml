@@ -54,12 +54,12 @@ generation = false
 
 [package.metadata.capi.pkg_config]
 name = "libebur128"
-description = "some description"
-version = "1.2.4"
+description = "EBU R 128 standard for loudness normalisation"
+version = "1.2.6"
 
 [package.metadata.capi.library]
 name = "ebur128"
-version = "1.2.4"
+version = "1.2.6"
 
 [[bench]]
 name = "interp"

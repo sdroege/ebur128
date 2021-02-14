@@ -13,10 +13,10 @@ pub struct State {
 
 #[no_mangle]
 pub unsafe extern "C" fn ebur128_get_version(major: *mut i32, minor: *mut i32, patch: *mut i32) {
-    // We're based on 1.2.4 so let's return that for now
+    // We're based on 1.2.6 so let's return that for now
     *major = 1;
     *minor = 2;
-    *patch = 4;
+    *patch = 6;
 }
 
 #[no_mangle]

@@ -1,46 +1,6 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 
 use ebur128::{EbuR128, Mode};
-use ebur128_c::Mode as ModeC;
-
-#[cfg(feature = "c-tests")]
-use ebur128_c::EbuR128 as EbuR128C;
-
-#[cfg(feature = "c-tests")]
-fn get_results_c(ebu: &EbuR128C, mode: ModeC) {
-    if mode.contains(ModeC::I) {
-        black_box(ebu.loudness_global().unwrap());
-    }
-    if mode.contains(ModeC::M) {
-        black_box(ebu.loudness_momentary().unwrap());
-    }
-    if mode.contains(ModeC::S) {
-        black_box(ebu.loudness_shortterm().unwrap());
-    }
-    black_box(ebu.loudness_window(1).unwrap());
-
-    if mode.contains(ModeC::LRA) {
-        black_box(ebu.loudness_range().unwrap());
-    }
-
-    if mode.contains(ModeC::SAMPLE_PEAK) {
-        black_box(ebu.sample_peak(0).unwrap());
-        black_box(ebu.sample_peak(1).unwrap());
-        black_box(ebu.prev_sample_peak(0).unwrap());
-        black_box(ebu.prev_sample_peak(1).unwrap());
-    }
-
-    if mode.contains(ModeC::TRUE_PEAK) {
-        black_box(ebu.true_peak(0).unwrap());
-        black_box(ebu.true_peak(1).unwrap());
-        black_box(ebu.prev_true_peak(0).unwrap());
-        black_box(ebu.prev_true_peak(1).unwrap());
-    }
-
-    if mode.contains(ModeC::I) {
-        black_box(ebu.relative_threshold().unwrap());
-    }
-}
 
 fn get_results(ebu: &EbuR128, mode: Mode) {
     if mode.contains(Mode::I) {
@@ -79,48 +39,24 @@ fn get_results(ebu: &EbuR128, mode: Mode) {
 
 pub fn criterion_benchmark(c: &mut Criterion) {
     let modes = [
-        ("M", Mode::M, ModeC::M),
-        ("S", Mode::S, ModeC::S),
-        ("I", Mode::I, ModeC::I),
-        ("LRA", Mode::LRA, ModeC::LRA),
-        ("SAMPLE_PEAK", Mode::SAMPLE_PEAK, ModeC::SAMPLE_PEAK),
-        ("TRUE_PEAK", Mode::TRUE_PEAK, ModeC::TRUE_PEAK),
-        (
-            "I histogram",
-            Mode::I | Mode::HISTOGRAM,
-            ModeC::I | ModeC::HISTOGRAM,
-        ),
-        (
-            "LRA histogram",
-            Mode::LRA | Mode::HISTOGRAM,
-            ModeC::LRA | ModeC::HISTOGRAM,
-        ),
-        (
-            "all",
-            Mode::all() & !Mode::HISTOGRAM,
-            ModeC::all() & !ModeC::HISTOGRAM,
-        ),
-        ("all histogram", Mode::all(), ModeC::all()),
+        ("M", Mode::M),
+        ("S", Mode::S),
+        ("I", Mode::I),
+        ("LRA", Mode::LRA),
+        ("SAMPLE_PEAK", Mode::SAMPLE_PEAK),
+        ("TRUE_PEAK", Mode::TRUE_PEAK),
+        ("I histogram", Mode::I | Mode::HISTOGRAM),
+        ("LRA histogram", Mode::LRA | Mode::HISTOGRAM),
+        ("all", Mode::all() & !Mode::HISTOGRAM),
+        ("all histogram", Mode::all()),
     ];
 
     #[allow(unused_variables)]
-    for (name, mode, mode_c) in &modes {
+    for (name, mode) in &modes {
         let mode = *mode;
-        #[cfg(feature = "c-tests")]
-        let mode_c = *mode_c;
 
         let mut group = c.benchmark_group(format!("ebur128 create: 48kHz 2ch {}", name));
 
-        #[cfg(feature = "c-tests")]
-        {
-            group.bench_function("C", |b| {
-                b.iter(|| {
-                    let ebu =
-                        EbuR128C::new(black_box(2), black_box(48_000), black_box(mode_c)).unwrap();
-                    drop(black_box(ebu));
-                })
-            });
-        }
         group.bench_function("Rust", |b| {
             b.iter(|| {
                 let ebu = EbuR128::new(black_box(2), black_box(48_000), black_box(mode)).unwrap();
@@ -149,18 +85,6 @@ pub fn criterion_benchmark(c: &mut Criterion) {
 
         let mut group = c.benchmark_group(format!("ebur128 process: 48kHz i16 2ch {}", name));
 
-        #[cfg(feature = "c-tests")]
-        {
-            group.bench_function("C", |b| {
-                b.iter(|| {
-                    let mut ebu =
-                        EbuR128C::new(black_box(2), black_box(48_000), black_box(mode_c)).unwrap();
-                    ebu.add_frames_i16(&data).unwrap();
-
-                    get_results_c(&ebu, black_box(mode_c));
-                })
-            });
-        }
         group.bench_function("Rust/Interleaved", |b| {
             b.iter(|| {
                 let mut ebu =
@@ -201,18 +125,6 @@ pub fn criterion_benchmark(c: &mut Criterion) {
 
         let mut group = c.benchmark_group(format!("ebur128 process: 48kHz i32 2ch {}", name));
 
-        #[cfg(feature = "c-tests")]
-        {
-            group.bench_function("C", |b| {
-                b.iter(|| {
-                    let mut ebu =
-                        EbuR128C::new(black_box(2), black_box(48_000), black_box(mode_c)).unwrap();
-                    ebu.add_frames_i32(&data).unwrap();
-
-                    get_results_c(&ebu, black_box(mode_c));
-                })
-            });
-        }
         group.bench_function("Rust/Interleaved", |b| {
             b.iter(|| {
                 let mut ebu =
@@ -253,18 +165,6 @@ pub fn criterion_benchmark(c: &mut Criterion) {
 
         let mut group = c.benchmark_group(format!("ebur128 process: 48kHz f32 2ch {}", name));
 
-        #[cfg(feature = "c-tests")]
-        {
-            group.bench_function("C", |b| {
-                b.iter(|| {
-                    let mut ebu =
-                        EbuR128C::new(black_box(2), black_box(48_000), black_box(mode_c)).unwrap();
-                    ebu.add_frames_f32(&data).unwrap();
-
-                    get_results_c(&ebu, black_box(mode_c));
-                })
-            });
-        }
         group.bench_function("Rust/Interleaved", |b| {
             b.iter(|| {
                 let mut ebu =
@@ -305,18 +205,6 @@ pub fn criterion_benchmark(c: &mut Criterion) {
 
         let mut group = c.benchmark_group(format!("ebur128 process: 48kHz f64 2ch {}", name));
 
-        #[cfg(feature = "c-tests")]
-        {
-            group.bench_function("C", |b| {
-                b.iter(|| {
-                    let mut ebu =
-                        EbuR128C::new(black_box(2), black_box(48_000), black_box(mode_c)).unwrap();
-                    ebu.add_frames_f64(&data).unwrap();
-
-                    get_results_c(&ebu, black_box(mode_c));
-                })
-            });
-        }
         group.bench_function("Rust/Interleaved", |b| {
             b.iter(|| {
                 let mut ebu =

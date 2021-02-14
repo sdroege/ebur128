@@ -110,7 +110,5 @@ jobs:
         override: true
 
     - name: Run tests
-      env:
-        QUICKCHECK_TESTS: 2
       run: |
-        cargo test --features c-tests,internal-tests,reference-tests
+        cargo test --features internal-tests,reference-tests

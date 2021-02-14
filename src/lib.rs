@@ -70,11 +70,6 @@ pub use utils::{energy_to_loudness, Interleaved, Planar, Samples};
 #[cfg(not(feature = "internal-tests"))]
 pub(crate) use utils::{energy_to_loudness, Interleaved, Planar, Samples};
 
-#[cfg(test)]
-pub mod tests {
-    pub use super::utils::tests::Signal;
-}
-
 #[cfg(feature = "capi")]
 #[allow(clippy::missing_safety_doc)]
 pub mod capi;

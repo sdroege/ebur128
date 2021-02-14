@@ -24,24 +24,6 @@ pub fn criterion_benchmark(c: &mut Criterion) {
 
     let mut group = c.benchmark_group("true_peak: 48kHz 2ch i16");
 
-    #[cfg(feature = "c-tests")]
-    unsafe {
-        let tp = true_peak::true_peak_create_c(black_box(48_000), black_box(2));
-
-        group.bench_function("C", |b| {
-            b.iter(|| {
-                true_peak::true_peak_check_short_c(
-                    black_box(tp),
-                    black_box(data.len() / 2usize),
-                    black_box(data.as_ptr()),
-                    black_box(peaks.as_mut_ptr()),
-                );
-            })
-        });
-
-        true_peak::true_peak_destroy_c(tp);
-    }
-
     {
         let mut tp = true_peak::TruePeak::new(black_box(48_000), black_box(2)).unwrap();
         group.bench_function("Rust/Interleaved", |b| {
@@ -84,24 +66,6 @@ pub fn criterion_benchmark(c: &mut Criterion) {
     }
 
     let mut group = c.benchmark_group("true_peak: 48kHz 2ch i32");
-
-    #[cfg(feature = "c-tests")]
-    unsafe {
-        let tp = true_peak::true_peak_create_c(black_box(48_000), black_box(2));
-
-        group.bench_function("C", |b| {
-            b.iter(|| {
-                true_peak::true_peak_check_int_c(
-                    black_box(tp),
-                    black_box(data.len() / 2usize),
-                    black_box(data.as_ptr()),
-                    black_box(peaks.as_mut_ptr()),
-                );
-            })
-        });
-
-        true_peak::true_peak_destroy_c(tp);
-    }
 
     {
         let mut tp = true_peak::TruePeak::new(black_box(48_000), black_box(2)).unwrap();
@@ -146,24 +110,6 @@ pub fn criterion_benchmark(c: &mut Criterion) {
 
     let mut group = c.benchmark_group("true_peak: 48kHz 2ch f32");
 
-    #[cfg(feature = "c-tests")]
-    unsafe {
-        let tp = true_peak::true_peak_create_c(black_box(48_000), black_box(2));
-
-        group.bench_function("C", |b| {
-            b.iter(|| {
-                true_peak::true_peak_check_float_c(
-                    black_box(tp),
-                    black_box(data.len() / 2usize),
-                    black_box(data.as_ptr()),
-                    black_box(peaks.as_mut_ptr()),
-                );
-            })
-        });
-
-        true_peak::true_peak_destroy_c(tp);
-    }
-
     {
         let mut tp = true_peak::TruePeak::new(black_box(48_000), black_box(2)).unwrap();
         group.bench_function("Rust/Interleaved", |b| {
@@ -206,24 +152,6 @@ pub fn criterion_benchmark(c: &mut Criterion) {
     }
 
     let mut group = c.benchmark_group("true_peak: 48kHz 2ch f64");
-
-    #[cfg(feature = "c-tests")]
-    unsafe {
-        let tp = true_peak::true_peak_create_c(black_box(48_000), black_box(2));
-
-        group.bench_function("C", |b| {
-            b.iter(|| {
-                true_peak::true_peak_check_double_c(
-                    black_box(tp),
-                    black_box(data.len() / 2usize),
-                    black_box(data.as_ptr()),
-                    black_box(peaks.as_mut_ptr()),
-                );
-            })
-        });
-
-        true_peak::true_peak_destroy_c(tp);
-    }
 
     {
         let mut tp = true_peak::TruePeak::new(black_box(48_000), black_box(2)).unwrap();

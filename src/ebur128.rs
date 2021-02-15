@@ -290,7 +290,7 @@ impl EbuR128 {
             return Err(Error::NoMem);
         }
 
-        if rate < 16 || rate > MAX_RATE {
+        if !(16..=MAX_RATE).contains(&rate) {
             return Err(Error::NoMem);
         }
 
@@ -440,7 +440,7 @@ impl EbuR128 {
             return Err(Error::NoMem);
         }
 
-        if rate < 16 || rate > MAX_RATE {
+        if !(16..=MAX_RATE).contains(&rate) {
             return Err(Error::NoMem);
         }
 

@@ -91,7 +91,7 @@ macro_rules! test_true_peak(
         let max_true_peak = 20.0 * f64::log10(max_true_peak);
 
         assert!(
-            max_true_peak <= $expected_true_peak + 0.2 && max_true_peak >= $expected_true_peak - 0.4,
+            ($expected_true_peak - 0.4..=$expected_true_peak + 0.2).contains(&max_true_peak),
             "{} != {}",
             max_true_peak,
             $expected_true_peak,

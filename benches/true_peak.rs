@@ -32,7 +32,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
             b.iter(|| {
                 true_peak::true_peak_check_short_c(
                     black_box(tp),
-                    black_box(data.len() / 2 as usize),
+                    black_box(data.len() / 2usize),
                     black_box(data.as_ptr()),
                     black_box(peaks.as_mut_ptr()),
                 );
@@ -93,7 +93,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
             b.iter(|| {
                 true_peak::true_peak_check_int_c(
                     black_box(tp),
-                    black_box(data.len() / 2 as usize),
+                    black_box(data.len() / 2usize),
                     black_box(data.as_ptr()),
                     black_box(peaks.as_mut_ptr()),
                 );
@@ -154,7 +154,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
             b.iter(|| {
                 true_peak::true_peak_check_float_c(
                     black_box(tp),
-                    black_box(data.len() / 2 as usize),
+                    black_box(data.len() / 2usize),
                     black_box(data.as_ptr()),
                     black_box(peaks.as_mut_ptr()),
                 );
@@ -215,7 +215,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
             b.iter(|| {
                 true_peak::true_peak_check_double_c(
                     black_box(tp),
-                    black_box(data.len() / 2 as usize),
+                    black_box(data.len() / 2usize),
                     black_box(data.as_ptr()),
                     black_box(peaks.as_mut_ptr()),
                 );

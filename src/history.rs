@@ -137,8 +137,6 @@ impl Histogram {
 }
 
 /// History of measured energies with a configurable maximum size.
-// TODO: Would ideally use a linked-list based queue of fixed-size queues
-// to not require a huge contiguous allocation
 pub struct Queue {
     queue: VecDeque<f64>,
     max: usize,

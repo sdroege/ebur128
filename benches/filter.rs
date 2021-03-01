@@ -83,7 +83,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
             group.bench_function("Rust/Interleaved", |b| {
                 b.iter(|| {
                     f.process(
-                        black_box(&ebur128::Interleaved::new(&*data, 2).unwrap()),
+                        black_box(ebur128::Interleaved::new(&*data, 2).unwrap()),
                         black_box(&mut data_out),
                         black_box(0),
                         black_box(&channel_map),
@@ -95,7 +95,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
             group.bench_function("Rust/Planar", |b| {
                 b.iter(|| {
                     f.process(
-                        black_box(&ebur128::Planar::new(&[fst, snd]).unwrap()),
+                        black_box(ebur128::Planar::new(&[fst, snd]).unwrap()),
                         black_box(&mut data_out),
                         black_box(0),
                         black_box(&channel_map),
@@ -147,7 +147,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
             group.bench_function("Rust/Interleaved", |b| {
                 b.iter(|| {
                     f.process(
-                        black_box(&ebur128::Interleaved::new(&*data, 2).unwrap()),
+                        black_box(ebur128::Interleaved::new(&*data, 2).unwrap()),
                         black_box(&mut data_out),
                         black_box(0),
                         black_box(&channel_map),
@@ -159,7 +159,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
             group.bench_function("Rust/Planar", |b| {
                 b.iter(|| {
                     f.process(
-                        black_box(&ebur128::Planar::new(&[fst, snd]).unwrap()),
+                        black_box(ebur128::Planar::new(&[fst, snd]).unwrap()),
                         black_box(&mut data_out),
                         black_box(0),
                         black_box(&channel_map),
@@ -211,7 +211,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
             group.bench_function("Rust/Interleaved", |b| {
                 b.iter(|| {
                     f.process(
-                        black_box(&ebur128::Interleaved::new(&*data, 2).unwrap()),
+                        black_box(ebur128::Interleaved::new(&*data, 2).unwrap()),
                         black_box(&mut data_out),
                         black_box(0),
                         black_box(&channel_map),
@@ -223,7 +223,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
             group.bench_function("Rust/Planar", |b| {
                 b.iter(|| {
                     f.process(
-                        black_box(&ebur128::Planar::new(&[fst, snd]).unwrap()),
+                        black_box(ebur128::Planar::new(&[fst, snd]).unwrap()),
                         black_box(&mut data_out),
                         black_box(0),
                         black_box(&channel_map),
@@ -275,7 +275,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
             group.bench_function("Rust/Interleaved", |b| {
                 b.iter(|| {
                     f.process(
-                        black_box(&ebur128::Interleaved::new(&*data, 2).unwrap()),
+                        black_box(ebur128::Interleaved::new(&*data, 2).unwrap()),
                         black_box(&mut data_out),
                         black_box(0),
                         black_box(&channel_map),
@@ -287,7 +287,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
             group.bench_function("Rust/Planar", |b| {
                 b.iter(|| {
                     f.process(
-                        black_box(&ebur128::Planar::new(&[fst, snd]).unwrap()),
+                        black_box(ebur128::Planar::new(&[fst, snd]).unwrap()),
                         black_box(&mut data_out),
                         black_box(0),
                         black_box(&channel_map),

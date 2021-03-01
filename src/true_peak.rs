@@ -73,7 +73,7 @@ impl UpsamplingScanner {
 
     pub fn check_true_peak<'a, T: Sample + 'a, S: crate::Samples<'a, T>>(
         &mut self,
-        src: &S,
+        src: S,
         peaks: &mut [f64],
     ) {
         macro_rules! tp_specialized_impl {
@@ -164,7 +164,7 @@ impl TruePeak {
 
     pub fn check_true_peak<'a, T: Sample + 'a, S: crate::Samples<'a, T>>(
         &mut self,
-        src: &S,
+        src: S,
         peaks: &mut [f64],
     ) {
         self.interp.check_true_peak(src, peaks)
@@ -224,7 +224,7 @@ mod tests {
         {
             let mut tp = TruePeak::new(signal.rate, signal.channels).unwrap();
             tp.check_true_peak(
-                &crate::Interleaved::new(
+                crate::Interleaved::new(
                     &signal.data[0..(len * signal.channels as usize)],
                     signal.channels as usize,
                 )
@@ -271,7 +271,7 @@ mod tests {
         {
             let mut tp = TruePeak::new(signal.rate, signal.channels).unwrap();
             tp.check_true_peak(
-                &crate::Interleaved::new(
+                crate::Interleaved::new(
                     &signal.data[0..(len * signal.channels as usize)],
                     signal.channels as usize,
                 )
@@ -318,7 +318,7 @@ mod tests {
         {
             let mut tp = TruePeak::new(signal.rate, signal.channels).unwrap();
             tp.check_true_peak(
-                &crate::Interleaved::new(
+                crate::Interleaved::new(
                     &signal.data[0..(len * signal.channels as usize)],
                     signal.channels as usize,
                 )
@@ -365,7 +365,7 @@ mod tests {
         {
             let mut tp = TruePeak::new(signal.rate, signal.channels).unwrap();
             tp.check_true_peak(
-                &crate::Interleaved::new(
+                crate::Interleaved::new(
                     &signal.data[0..(len * signal.channels as usize)],
                     signal.channels as usize,
                 )

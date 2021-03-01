@@ -594,7 +594,7 @@ impl EbuR128 {
                 let (current, next) = src.split_at(self.needed_frames);
 
                 self.filter.process(
-                    &current,
+                    current,
                     &mut *self.audio_data,
                     self.audio_data_index,
                     &self.channel_map,
@@ -632,7 +632,7 @@ impl EbuR128 {
                 let (current, next) = src.split_at(num_frames);
 
                 self.filter.process(
-                    &current,
+                    current,
                     &mut *self.audio_data,
                     self.audio_data_index,
                     &self.channel_map,

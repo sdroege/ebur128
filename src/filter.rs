@@ -174,7 +174,7 @@ impl Filter {
 
     pub fn process<'a, T: Sample + 'a, S: crate::Samples<'a, T>>(
         &mut self,
-        src: &S,
+        src: S,
         dest: &mut [f64],
         dest_index: usize,
         channel_map: &[crate::ebur128::Channel],
@@ -205,11 +205,6 @@ impl Filter {
                         *sample_peak = max;
                     }
                 }
-            }
-
-            if let Some(ref mut tp) = self.tp {
-                assert!(self.true_peak.len() == self.channels as usize);
-                tp.check_true_peak(src, &mut *self.true_peak);
             }
 
             let dest_stride = dest.len() / self.channels as usize;
@@ -257,6 +252,11 @@ impl Filter {
                         }
                     }
                 }
+            }
+
+            if let Some(ref mut tp) = self.tp {
+                assert!(self.true_peak.len() == self.channels as usize);
+                tp.check_true_peak(src, &mut *self.true_peak);
             }
         });
     }
@@ -517,7 +517,7 @@ mod tests {
             let mut data_out_tmp = vec![0.0f64; frames * signal.channels as usize];
 
             f.process(
-                &crate::Interleaved::new(
+                crate::Interleaved::new(
                     &signal.data[..(frames * signal.channels as usize)],
                     signal.channels as usize,
                 )
@@ -605,7 +605,7 @@ mod tests {
             let mut data_out_tmp = vec![0.0f64; frames * signal.channels as usize];
 
             f.process(
-                &crate::Interleaved::new(
+                crate::Interleaved::new(
                     &signal.data[..(frames * signal.channels as usize)],
                     signal.channels as usize,
                 )
@@ -693,7 +693,7 @@ mod tests {
             let mut data_out_tmp = vec![0.0f64; frames * signal.channels as usize];
 
             f.process(
-                &crate::Interleaved::new(
+                crate::Interleaved::new(
                     &signal.data[..(frames * signal.channels as usize)],
                     signal.channels as usize,
                 )
@@ -781,7 +781,7 @@ mod tests {
             let mut data_out_tmp = vec![0.0f64; frames * signal.channels as usize];
 
             f.process(
-                &crate::Interleaved::new(
+                crate::Interleaved::new(
                     &signal.data[..(frames * signal.channels as usize)],
                     signal.channels as usize,
                 )

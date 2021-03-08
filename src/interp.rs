@@ -154,6 +154,11 @@ macro_rules! interp_impl {
             pub fn reset(&mut self) {
                 self.buffer = RollingBuffer::new();
             }
+
+            #[inline(always)]
+            pub fn filter_length(&self) -> usize {
+                TAPS / $factor
+            }
         }
     };
 }

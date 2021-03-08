@@ -23,10 +23,10 @@ use crate::interp::{Interp2F, Interp4F};
 use crate::utils::{FrameAccumulator, Sample};
 use dasp_frame::Frame;
 
-use UpsamplingScanner::*;
+use UpsamplingScannerMode::*;
 
 #[derive(Debug)]
-enum UpsamplingScanner {
+enum UpsamplingScannerMode {
     Mono2F(Interp2F<[f32; 1]>),
     Stereo2F(Interp2F<[f32; 2]>),
     Quad2F(Interp2F<[f32; 4]>),
@@ -39,6 +39,12 @@ enum UpsamplingScanner {
     OctoSurround4F(Interp4F<[f32; 8]>),
     Generic2F(Box<[Interp2F<[f32; 1]>]>),
     Generic4F(Box<[Interp4F<[f32; 1]>]>),
+}
+
+#[derive(Debug)]
+struct UpsamplingScanner {
+    mode: UpsamplingScannerMode,
+    processed: u64,
 }
 
 impl UpsamplingScanner {
@@ -55,7 +61,7 @@ impl UpsamplingScanner {
             return None;
         };
 
-        Some(match (channels as usize, interp_factor) {
+        let mode = match (channels as usize, interp_factor) {
             (1, Factor::Two) => Mono2F(Interp2F::new()),
             (2, Factor::Two) => Stereo2F(Interp2F::new()),
             (4, Factor::Two) => Quad2F(Interp2F::new()),
@@ -68,12 +74,13 @@ impl UpsamplingScanner {
             (8, Factor::Four) => OctoSurround4F(Interp4F::new()),
             (c, Factor::Two) => Generic2F(vec![Interp2F::new(); c].into()),
             (c, Factor::Four) => Generic4F(vec![Interp4F::new(); c].into()),
-        })
+        };
+        Some(UpsamplingScanner { mode, processed: 0 })
     }
 
     pub fn check_true_peak<'a, T: Sample + 'a, S: crate::Samples<'a, T>>(
         &mut self,
-        src: S,
+        mut src: S,
         peaks: &mut [f64],
     ) {
         macro_rules! tp_specialized_impl {
@@ -81,6 +88,20 @@ impl UpsamplingScanner {
                 const CHANNELS: usize = $channels;
                 assert!(src.channels() == CHANNELS && peaks.len() == CHANNELS);
                 let mut tmp_peaks = <[f32; CHANNELS]>::from_fn(|i| peaks[i] as f32);
+
+                let total_frames = src.frames();
+                let priming_left =
+                    ($interpolator.filter_length() as u64).saturating_sub(self.processed);
+
+                if priming_left > 0 {
+                    let (first, second) = src.split_at(priming_left as usize);
+                    src = second;
+                    first.foreach_frame(|frame: [T; CHANNELS]| {
+                        let frame_f32: [f32; CHANNELS] =
+                            Frame::map(frame, |s| s.to_sample::<f32>());
+                        $interpolator.interpolate(frame_f32);
+                    })
+                }
 
                 src.foreach_frame(|frame: [T; CHANNELS]| {
                     let frame_f32: [f32; CHANNELS] = Frame::map(frame, |s| s.to_sample::<f32>());
@@ -91,6 +112,7 @@ impl UpsamplingScanner {
                 for (dst, src) in Iterator::zip(peaks.into_iter(), &tmp_peaks) {
                     *dst = *src as f64;
                 }
+                self.processed += total_frames as u64;
             }};
         }
 
@@ -112,7 +134,7 @@ impl UpsamplingScanner {
             }};
         }
 
-        match self {
+        match &mut self.mode {
             Mono2F(interpolator) => tp_specialized_impl!(1, interpolator),
             Stereo2F(interpolator) => tp_specialized_impl!(2, interpolator),
             Quad2F(interpolator) => tp_specialized_impl!(4, interpolator),
@@ -129,7 +151,7 @@ impl UpsamplingScanner {
     }
 
     fn reset(&mut self) {
-        match self {
+        match &mut self.mode {
             Mono2F(interpolator) => interpolator.reset(),
             Stereo2F(interpolator) => interpolator.reset(),
             Quad2F(interpolator) => interpolator.reset(),
@@ -143,6 +165,7 @@ impl UpsamplingScanner {
             Generic2F(interpolators) => interpolators.iter_mut().for_each(Interp2F::reset),
             Generic4F(interpolators) => interpolators.iter_mut().for_each(Interp4F::reset),
         }
+        self.processed = 0;
     }
 }
 

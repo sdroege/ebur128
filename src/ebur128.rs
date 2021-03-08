@@ -1198,6 +1198,63 @@ mod tests {
     }
 
     #[test]
+    fn cos_stereo_f32() {
+        // When starting with high-spectrum samples, true-peak must ignore samples up until
+        // filter is saturated, or false high values will be caught
+        let mut data = vec![0.0f32; 48_000 * 5 * 2];
+        let mut accumulator = 0.0;
+        let step = 2.0 * std::f32::consts::PI * 440.0 / 48_000.0;
+        for out in data.chunks_exact_mut(2) {
+            let val = f32::cos(accumulator);
+            out[0] = val;
+            out[1] = val;
+            accumulator += step;
+        }
+
+        let mut ebu = EbuR128::new(2, 48_000, Mode::all()).unwrap();
+        ebu.add_frames_f32(&data).unwrap();
+
+        // Check that we have the same loudness and peak-values as for the same sine-curve
+        assert_float_eq!(
+            ebu.loudness_global().unwrap(),
+            -0.6500000000000054,
+            abs <= 0.000001
+        );
+
+        assert_float_eq!(ebu.sample_peak(0).unwrap(), 1.0, abs <= 0.000001);
+        assert_float_eq!(ebu.sample_peak(1).unwrap(), 1.0, abs <= 0.000001);
+        assert_float_eq!(ebu.prev_sample_peak(0).unwrap(), 1.0, abs <= 0.000001);
+        assert_float_eq!(ebu.prev_sample_peak(1).unwrap(), 1.0, abs <= 0.000001);
+
+        assert_float_eq!(
+            ebu.true_peak(0).unwrap(),
+            1.0008491277694702,
+            abs <= 0.000001
+        );
+        assert_float_eq!(
+            ebu.true_peak(1).unwrap(),
+            1.0008491277694702,
+            abs <= 0.000001
+        );
+        assert_float_eq!(
+            ebu.prev_true_peak(0).unwrap(),
+            1.0008491277694702,
+            abs <= 0.000001
+        );
+        assert_float_eq!(
+            ebu.prev_true_peak(1).unwrap(),
+            1.0008491277694702,
+            abs <= 0.000001
+        );
+
+        assert_float_eq!(
+            ebu.relative_threshold().unwrap(),
+            -10.650000000000006,
+            abs <= 0.000001
+        );
+    }
+
+    #[test]
     fn sine_stereo_f64() {
         let mut data = vec![0.0f64; 48_000 * 5 * 2];
         let mut accumulator = 0.0;

@@ -22,6 +22,7 @@
 use crate::interp::{Interp2F, Interp4F};
 use crate::utils::{FrameAccumulator, Sample};
 use dasp_frame::Frame;
+use smallvec::{smallvec, SmallVec};
 
 use UpsamplingScanner::*;
 
@@ -168,6 +169,11 @@ impl TruePeak {
         peaks: &mut [f64],
     ) {
         self.interp.check_true_peak(src, peaks)
+    }
+
+    pub fn seed<'a, T: Sample + 'a, S: crate::Samples<'a, T>>(&mut self, src: S) {
+        let mut true_peaks: SmallVec<[f64; 16]> = smallvec![0.0; src.channels()];
+        self.interp.check_true_peak(src, &mut true_peaks)
     }
 }
 

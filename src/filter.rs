@@ -261,6 +261,59 @@ impl Filter {
         });
     }
 
+    pub fn seed<'a, T: Sample + 'a, S: crate::Samples<'a, T>>(
+        &mut self,
+        src: S,
+        channel_map: &[crate::ebur128::Channel],
+    ) {
+        assert!(channel_map.len() == self.channels as usize);
+        assert!(src.channels() == self.channels as usize);
+        assert!(self.filter_state.len() == self.channels as usize);
+
+        ftz::with_ftz(|ftz| {
+            for (c, channel_map) in channel_map.iter().enumerate() {
+                if *channel_map == crate::ebur128::Channel::Unused {
+                    continue;
+                }
+
+                assert!(c < src.channels());
+
+                let Filter {
+                    ref mut filter_state,
+                    ref a,
+                    ..
+                } = *self;
+                let filter_state = &mut filter_state[c];
+
+                src.foreach_sample(c, |src| {
+                    filter_state[0] = (*src).to_sample::<f64>()
+                        - a[1] * filter_state[1]
+                        - a[2] * filter_state[2]
+                        - a[3] * filter_state[3]
+                        - a[4] * filter_state[4];
+
+                    filter_state[4] = filter_state[3];
+                    filter_state[3] = filter_state[2];
+                    filter_state[2] = filter_state[1];
+                    filter_state[1] = filter_state[0];
+                });
+
+                if ftz.is_none() {
+                    for v in filter_state {
+                        if v.abs() < std::f64::EPSILON {
+                            *v = 0.0;
+                        }
+                    }
+                }
+            }
+
+            if let Some(ref mut tp) = self.tp {
+                assert!(self.true_peak.len() == self.channels as usize);
+                tp.seed(src);
+            }
+        });
+    }
+
     pub fn calc_gating_block(
         frames_per_block: usize,
         audio_data: &[f64],

@@ -78,73 +78,73 @@ bitflags! {
 ///
 /// Use these values when setting the channel map with
 /// [`EbuR128::set_channel`](struct.EbuR128.html#method.set_channel).
-/// See definitions in ITU R-REC-BS 1770-4.
+/// See definitions in ITU R-REC-BS 1770-4 and ITU R-REC-BS 2051-2.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u32)]
 pub enum Channel {
     /// unused channel (for example LFE channel)
     Unused,
-    /// Left or itu M+030
+    /// Left or ITU M+030
     Left,
-    /// Right or itu M-030
+    /// Right or ITU M-030
     Right,
-    /// Center or itu M+000
+    /// Center or ITU M+000
     Center,
-    /// Left surround or itu M+110
+    /// Left surround or ITU M+110
     LeftSurround,
-    /// Right surround or itu M-110
+    /// Right surround or ITU M-110
     RightSurround,
     /// a channel that is counted twice
     DualMono,
-    /// itu M+SC
+    /// ITU M+SC
     MpSC,
-    /// itu M-SC
+    /// ITU M-SC
     MmSC,
-    /// itu M+060
+    /// ITU M+060
     Mp060,
-    /// itu M-060
+    /// ITU M-060
     Mm060,
-    /// itu M+090
+    /// ITU M+090
     Mp090,
-    /// itu M-090
+    /// ITU M-090
     Mm090,
-    /// itu M+135
+    /// ITU M+135
     Mp135,
-    /// itu M-135
+    /// ITU M-135
     Mm135,
-    /// itu M+180
+    /// ITU M+180
     Mp180,
-    /// itu U+000
+    /// ITU U+000
     Up000,
-    /// itu U+030
+    /// ITU U+030
     Up030,
-    /// itu U-030
+    /// ITU U-030
     Um030,
-    /// itu U+045
+    /// ITU U+045
     Up045,
-    /// itu U-030
+    /// ITU U-030
     Um045,
-    /// itu U+090
+    /// ITU U+090
     Up090,
-    /// itu U-090
+    /// ITU U-090
     Um090,
-    /// itu U+110
+    /// ITU U+110
     Up110,
-    /// itu U-110
+    /// ITU U-110
     Um110,
-    /// itu U+135
+    /// ITU U+135
     Up135,
-    /// itu U-135
+    /// ITU U-135
     Um135,
-    /// itu U+180
+    /// ITU U+180
     Up180,
-    /// itu T+000
+    /// ITU T+000
     Tp000,
-    /// itu B+000
+    /// ITU B+000
     Bp000,
-    /// itu B+045
+    /// ITU B+045
     Bp045,
-    /// itu B-045
+    /// ITU B-045
     Bm045,
 }
 

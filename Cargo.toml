@@ -45,7 +45,7 @@ precision-true-peak = []
 name = "ebur128"
 
 [package.metadata.capi]
-min_version = "0.6.12"
+min_version = "0.9.1"
 
 [package.metadata.capi.header]
 name = "ebur128.h"

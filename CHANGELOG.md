@@ -85,8 +85,8 @@ specifically the [variant used by Rust](http://doc.crates.io/manifest.html#the-v
 ## 0.1.0 - 2020-01-06
 - Initial release of ebur128.
 
-[Unreleased]: https://github.com/sdroege/rust-muldiv/compare/0.1.6...HEAD
-[0.1.6]: https://github.com/sdroege/rust-muldiv/compare/0.1.5...0.1.6
+[Unreleased]: https://github.com/sdroege/ebur128/compare/0.1.6...HEAD
+[0.1.6]: https://github.com/sdroege/ebur128/compare/0.1.5...0.1.6
 [0.1.5]: https://github.com/sdroege/ebur128/compare/0.1.4...0.1.5
 [0.1.4]: https://github.com/sdroege/ebur128/compare/0.1.3...0.1.4
 [0.1.3]: https://github.com/sdroege/ebur128/compare/0.1.2...0.1.3

@@ -17,6 +17,10 @@ smallvec = "1.0"
 dasp_sample = "0.11"
 dasp_frame = "0.11"
 
+[target.'cfg(target_arch="wasm32")'.dependencies]
+wasm-bindgen = { version = "0.2", optional = true }
+js-sys = { version = "0.3", optional = true }
+
 [build-dependencies]
 cc = { version = "1.0", optional = true }
 
@@ -34,6 +38,7 @@ internal-tests = []
 c-tests = ["cc", "internal-tests"] # and ebur128-c, quickcheck, quickcheck_macros, rand but dev-dependencies can't be optional...
 reference-tests = []
 capi = []
+wasm = ["wasm-bindgen", "js-sys"]
 
 # Enabling this increases the precision of true-peak calculation slightly, but causes a significant
 # performance-hit in the default build-configuration. To avoid the performance-hit, also enable
@@ -43,6 +48,8 @@ precision-true-peak = []
 
 [lib]
 name = "ebur128"
+# Needed for wasm-bindgen...
+crate-type = ["cdylib", "rlib"]
 
 [package.metadata.capi]
 min_version = "0.9.1"
@@ -60,6 +67,10 @@ version = "1.2.6"
 [package.metadata.capi.library]
 name = "ebur128"
 version = "1.2.6"
+
+[package.metadata.wasm-pack.profile.release]
+# See https://github.com/rustwasm/wasm-pack/issues/886
+wasm-opt = ["-Oz", "--enable-mutable-globals"]
 
 [[bench]]
 name = "interp"

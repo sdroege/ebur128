@@ -78,3 +78,6 @@ pub mod tests {
 #[cfg(feature = "capi")]
 #[allow(clippy::missing_safety_doc)]
 pub mod capi;
+
+#[cfg(all(feature = "wasm", target_arch = "wasm32"))]
+pub mod wasm;

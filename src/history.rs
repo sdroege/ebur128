@@ -181,17 +181,13 @@ impl Queue {
         let minus_twenty_decibels = f64::powf(10.0, -20.0 / 10.0);
         let integrated = minus_twenty_decibels * power;
 
-        // TODO: Use iterators here or otherwise get rid of bounds checks
-        let mut relgated = 0;
-        let mut relgated_size = q.len();
-        while relgated_size > 0 && q[relgated] < integrated {
-            relgated += 1;
-            relgated_size -= 1;
-        }
+        let relgated = q.iter().take_while(|&v| *v < integrated).count();
+        let relgated_size = q.len() - relgated;
 
-        if relgated_size > 0 {
-            let h_en = q[relgated + ((relgated_size - 1) as f64 * 0.95 + 0.5) as usize];
-            let l_en = q[relgated + ((relgated_size - 1) as f64 * 0.1 + 0.5) as usize];
+        if let Some(relgated_size) = relgated_size.checked_sub(1) {
+            let relgated_size = relgated_size as f64;
+            let h_en = q[relgated + (relgated_size * 0.95 + 0.5) as usize];
+            let l_en = q[relgated + (relgated_size * 0.1 + 0.5) as usize];
 
             energy_to_loudness(h_en) - energy_to_loudness(l_en)
         } else {

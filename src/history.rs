@@ -64,10 +64,7 @@ impl Histogram {
     }
 
     fn reset(&mut self) {
-        // TODO: Use slice::fill() once stabilized
-        for v in self.0.iter_mut() {
-            *v = 0;
-        }
+        self.0.fill(0);
     }
 
     fn calc_relative_threshold(&self) -> (u64, f64) {

@@ -545,10 +545,7 @@ impl EbuR128 {
 
     /// Resets the current state.
     pub fn reset(&mut self) {
-        // TODO: Use slice::fill() once stabilized
-        for v in &mut *self.audio_data {
-            *v = 0.0;
-        }
+        self.audio_data.fill(0.0);
 
         // the first block needs 400ms of audio data
         self.needed_frames = self.samples_in_100ms * 4;
@@ -557,14 +554,8 @@ impl EbuR128 {
         // reset short term frame counter
         self.short_term_frame_counter = 0;
 
-        // TODO: Use slice::fill() once stabilized
-        for v in &mut *self.true_peak {
-            *v = 0.0;
-        }
-        // TODO: Use slice::fill() once stabilized
-        for v in &mut *self.sample_peak {
-            *v = 0.0;
-        }
+        self.true_peak.fill(0.0);
+        self.sample_peak.fill(0.0);
 
         self.filter.reset();
         self.block_energy_history.reset();

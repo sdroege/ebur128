@@ -28,7 +28,7 @@ pub fn energy_to_loudness(energy: f64) -> f64 {
     // tests because of that.
     #[cfg(test)]
     {
-        10.0 * (f64::ln(energy) / f64::ln(10.0)) - 0.691
+        10.0 * (f64::ln(energy) / std::f64::consts::LN_10) - 0.691
     }
     #[cfg(not(test))]
     {

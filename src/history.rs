@@ -80,11 +80,16 @@ impl Histogram {
     }
 
     fn loudness_range(h: &[u64; 1000]) -> f64 {
+        let mut h_sum = [0; 1000];
         let mut size = 0;
         let mut power = 0.0;
 
-        for (count, energy) in Iterator::zip(h.iter(), HISTOGRAM_ENERGIES.iter()) {
+        for ((count, count_sum), energy) in Iterator::zip(
+            Iterator::zip(h.iter(), h_sum.iter_mut()),
+            HISTOGRAM_ENERGIES.iter(),
+        ) {
             size += *count;
+            *count_sum = size;
             power += *count as f64 * *energy;
         }
 
@@ -106,28 +111,42 @@ impl Histogram {
                 index
             }
         };
-        let size = h[index..].iter().sum::<u64>();
+        let before = if let Some(prev_index) = index.checked_sub(1) {
+            h_sum.get(prev_index).cloned().unwrap_or(0)
+        } else {
+            0
+        };
+        let size = size - before;
         if size == 0 {
             return 0.0;
         }
 
-        let percentile_low = ((size - 1) as f64 * 0.1 + 0.5) as u64;
-        let percentile_high = ((size - 1) as f64 * 0.95 + 0.5) as u64;
+        let percentile_low = ((size - 1) as f64 * 0.1 + 0.5) as u64 + before;
+        let percentile_high = ((size - 1) as f64 * 0.95 + 0.5) as u64 + before;
 
-        // TODO: Use an iterator here, maybe something around Iterator::scan()
-        let mut j = index;
-        let mut size = 0;
-        while size <= percentile_low {
-            size += h[j];
-            j += 1;
-        }
-        let l_en = HISTOGRAM_ENERGIES[j - 1];
+        let j = h_sum[index..]
+            .binary_search(&(percentile_low + 1))
+            .unwrap_or_else(std::convert::identity);
+        let j = match h_sum[..index + j]
+            .iter()
+            .rposition(|&v| v <= percentile_low)
+        {
+            Some(j) => j + 1,
+            None => 0,
+        };
+        let l_en = HISTOGRAM_ENERGIES[j];
 
-        while size <= percentile_high {
-            size += h[j];
-            j += 1;
-        }
-        let h_en = HISTOGRAM_ENERGIES[j - 1];
+        let j = h_sum[index..]
+            .binary_search(&(percentile_high + 1))
+            .unwrap_or_else(std::convert::identity);
+        let j = match h_sum[..index + j]
+            .iter()
+            .rposition(|&v| v <= percentile_high)
+        {
+            Some(j) => j + 1,
+            None => 0,
+        };
+        let h_en = HISTOGRAM_ENERGIES[j];
 
         energy_to_loudness(h_en) - energy_to_loudness(l_en)
     }

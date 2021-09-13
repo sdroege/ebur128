@@ -229,10 +229,7 @@ impl Filter {
                         + b[3] * filter_state[3]
                         + b[4] * filter_state[4];
 
-                    filter_state[4] = filter_state[3];
-                    filter_state[3] = filter_state[2];
-                    filter_state[2] = filter_state[1];
-                    filter_state[1] = filter_state[0];
+                    filter_state.copy_within(0..4, 1);
                 });
 
                 if ftz.is_none() {
@@ -282,10 +279,7 @@ impl Filter {
                         - a[3] * filter_state[3]
                         - a[4] * filter_state[4];
 
-                    filter_state[4] = filter_state[3];
-                    filter_state[3] = filter_state[2];
-                    filter_state[2] = filter_state[1];
-                    filter_state[1] = filter_state[0];
+                    filter_state.copy_within(0..4, 1);
                 });
 
                 if ftz.is_none() {

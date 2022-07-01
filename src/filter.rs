@@ -398,10 +398,10 @@ mod ftz {
     pub fn with_ftz<F: FnOnce(Option<&Ftz>) -> T, T>(func: F) -> T {
         // Safety: MXCSR is unset in any case when Ftz goes out of scope and the closure also can't
         // mem::forget() it to prevent running the Drop impl.
-        unsafe {
-            let ftz = Ftz::new();
+        
+            let ftz = unsafe {Ftz::new()};
             func(Some(&ftz))
-        }
+        
     }
 }
 

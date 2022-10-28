@@ -31,8 +31,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
     }
     group.bench_function("Rust", |b| {
         b.iter(|| {
-            let interp = interp::Interp2F::<[f32; 4]>::new();
-            drop(black_box(interp));
+            let _interp = interp::Interp2F::<[f32; 4]>::new();
         })
     });
 

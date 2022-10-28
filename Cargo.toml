@@ -22,7 +22,7 @@ cc = { version = "1.0", optional = true }
 
 [dev-dependencies]
 criterion = "0.3"
-float_eq = "0.6"
+float_eq = "1"
 ebur128-c = { package = "ebur128", version = "=0.1.1" }
 quickcheck = "0.9"
 quickcheck_macros = "0.9"

@@ -1,6 +1,6 @@
 [package]
 name = "ebur128"
-version = "0.1.6"
+version = "0.1.7"
 authors = ["Sebastian Dröge <sebastian@centricular.com>"]
 edition = "2018"
 categories = ["multimedia"]

@@ -19,7 +19,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-use crate::interp::{Interp2F, Interp4F};
+use crate::interp::InterpF;
 use crate::utils::{FrameAccumulator, Sample};
 use dasp_frame::Frame;
 use smallvec::{smallvec, SmallVec};
@@ -28,18 +28,18 @@ use UpsamplingScanner::*;
 
 #[derive(Debug)]
 enum UpsamplingScanner {
-    Mono2F(Interp2F<[f32; 1]>),
-    Stereo2F(Interp2F<[f32; 2]>),
-    Quad2F(Interp2F<[f32; 4]>),
-    Surround2F(Interp2F<[f32; 6]>),
-    OctoSurround2F(Interp2F<[f32; 8]>),
-    Mono4F(Interp4F<[f32; 1]>),
-    Stereo4F(Interp4F<[f32; 2]>),
-    Quad4F(Interp4F<[f32; 4]>),
-    Surround4F(Interp4F<[f32; 6]>),
-    OctoSurround4F(Interp4F<[f32; 8]>),
-    Generic2F(Box<[Interp2F<[f32; 1]>]>),
-    Generic4F(Box<[Interp4F<[f32; 1]>]>),
+    Mono2F(InterpF<24, 2, [f32; 1]>),
+    Stereo2F(InterpF<24, 2, [f32; 2]>),
+    Quad2F(InterpF<24, 2, [f32; 4]>),
+    Surround2F(InterpF<24, 2, [f32; 6]>),
+    OctoSurround2F(InterpF<24, 2, [f32; 8]>),
+    Mono4F(InterpF<12, 4, [f32; 1]>),
+    Stereo4F(InterpF<12, 4, [f32; 2]>),
+    Quad4F(InterpF<12, 4, [f32; 4]>),
+    Surround4F(InterpF<12, 4, [f32; 6]>),
+    OctoSurround4F(InterpF<12, 4, [f32; 8]>),
+    Generic2F(Box<[InterpF<24, 2, [f32; 1]>]>),
+    Generic4F(Box<[InterpF<12, 4, [f32; 1]>]>),
 }
 
 impl UpsamplingScanner {
@@ -57,18 +57,18 @@ impl UpsamplingScanner {
         };
 
         Some(match (channels as usize, interp_factor) {
-            (1, Factor::Two) => Mono2F(Interp2F::new()),
-            (2, Factor::Two) => Stereo2F(Interp2F::new()),
-            (4, Factor::Two) => Quad2F(Interp2F::new()),
-            (6, Factor::Two) => Surround2F(Interp2F::new()),
-            (8, Factor::Two) => OctoSurround2F(Interp2F::new()),
-            (1, Factor::Four) => Mono4F(Interp4F::new()),
-            (2, Factor::Four) => Stereo4F(Interp4F::new()),
-            (4, Factor::Four) => Quad4F(Interp4F::new()),
-            (6, Factor::Four) => Surround4F(Interp4F::new()),
-            (8, Factor::Four) => OctoSurround4F(Interp4F::new()),
-            (c, Factor::Two) => Generic2F(vec![Interp2F::new(); c].into()),
-            (c, Factor::Four) => Generic4F(vec![Interp4F::new(); c].into()),
+            (1, Factor::Two) => Mono2F(InterpF::new()),
+            (2, Factor::Two) => Stereo2F(InterpF::new()),
+            (4, Factor::Two) => Quad2F(InterpF::new()),
+            (6, Factor::Two) => Surround2F(InterpF::new()),
+            (8, Factor::Two) => OctoSurround2F(InterpF::new()),
+            (1, Factor::Four) => Mono4F(InterpF::new()),
+            (2, Factor::Four) => Stereo4F(InterpF::new()),
+            (4, Factor::Four) => Quad4F(InterpF::new()),
+            (6, Factor::Four) => Surround4F(InterpF::new()),
+            (8, Factor::Four) => OctoSurround4F(InterpF::new()),
+            (c, Factor::Two) => Generic2F(vec![InterpF::new(); c].into()),
+            (c, Factor::Four) => Generic4F(vec![InterpF::new(); c].into()),
         })
     }
 
@@ -141,8 +141,8 @@ impl UpsamplingScanner {
             Quad4F(interpolator) => interpolator.reset(),
             Surround4F(interpolator) => interpolator.reset(),
             OctoSurround4F(interpolator) => interpolator.reset(),
-            Generic2F(interpolators) => interpolators.iter_mut().for_each(Interp2F::reset),
-            Generic4F(interpolators) => interpolators.iter_mut().for_each(Interp4F::reset),
+            Generic2F(interpolators) => interpolators.iter_mut().for_each(InterpF::reset),
+            Generic4F(interpolators) => interpolators.iter_mut().for_each(InterpF::reset),
         }
     }
 }

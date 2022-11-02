@@ -31,7 +31,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
     }
     group.bench_function("Rust", |b| {
         b.iter(|| {
-            let _interp = interp::Interp2F::<[f32; 4]>::new();
+            let _interp = interp::InterpF::<24, 2, [f32; 4]>::new();
         })
     });
 
@@ -54,7 +54,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
         interp::interp_destroy_c(interp);
     }
     {
-        let mut interp = interp::Interp2F::new();
+        let mut interp = interp::InterpF::<24, 2, _>::new();
         let (_, data, _) = unsafe { data.align_to::<[f32; 2]>() };
         let (_, data_out, _) = unsafe { data_out.align_to_mut::<[f32; 2]>() };
         group.bench_function("Rust", |b| {
@@ -88,7 +88,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
         interp::interp_destroy_c(interp);
     }
     {
-        let mut interp = interp::Interp4F::new();
+        let mut interp = interp::InterpF::<12, 4, _>::new();
         let (_, data, _) = unsafe { data.align_to::<[f32; 2]>() };
         let (_, data_out, _) = unsafe { data_out.align_to_mut::<[f32; 2]>() };
         group.bench_function("Rust", |b| {

@@ -368,7 +368,7 @@ impl EbuR128 {
 
     /// Get the configured channel types.
     pub fn channel_map(&self) -> &[Channel] {
-        &*self.channel_map
+        &self.channel_map
     }
 
     /// Get the configured maximum window duration in ms.
@@ -586,7 +586,7 @@ impl EbuR128 {
 
                 self.filter.process(
                     current,
-                    &mut *self.audio_data,
+                    &mut self.audio_data,
                     self.audio_data_index,
                     &self.channel_map,
                 );
@@ -624,7 +624,7 @@ impl EbuR128 {
 
                 self.filter.process(
                     current,
-                    &mut *self.audio_data,
+                    &mut self.audio_data,
                     self.audio_data_index,
                     &self.channel_map,
                 );
@@ -793,7 +793,7 @@ impl EbuR128 {
             })
             .collect::<Result<SmallVec<[_; 16]>, _>>()?;
 
-        Ok(crate::history::History::gated_loudness_multiple(&*h))
+        Ok(crate::history::History::gated_loudness_multiple(&h))
     }
 
     fn energy_in_interval(&self, interval_frames: usize) -> Result<f64, Error> {
@@ -884,7 +884,7 @@ impl EbuR128 {
             })
             .collect::<Result<SmallVec<[_; 16]>, _>>()?;
 
-        crate::history::History::loudness_range_multiple(&*h)
+        crate::history::History::loudness_range_multiple(&h)
     }
 
     /// Get maximum sample peak from all frames that have been processed.

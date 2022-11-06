@@ -63,7 +63,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
 
         #[cfg(feature = "c-tests")]
         unsafe {
-            let f = filter::filter_create_c(48_000, 2, if *sample_peak { 1 } else { 0 }, 0);
+            let f = filter::filter_create_c(48_000, 2, i32::from(*sample_peak), 0);
             group.bench_function("C", |b| {
                 b.iter(|| {
                     filter::filter_process_short_c(
@@ -83,7 +83,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
             group.bench_function("Rust/Interleaved", |b| {
                 b.iter(|| {
                     f.process(
-                        black_box(ebur128::Interleaved::new(&*data, 2).unwrap()),
+                        black_box(ebur128::Interleaved::new(&data, 2).unwrap()),
                         black_box(&mut data_out),
                         black_box(0),
                         black_box(&channel_map),
@@ -127,7 +127,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
 
         #[cfg(feature = "c-tests")]
         unsafe {
-            let f = filter::filter_create_c(48_000, 2, if *sample_peak { 1 } else { 0 }, 0);
+            let f = filter::filter_create_c(48_000, 2, i32::from(*sample_peak), 0);
             group.bench_function("C", |b| {
                 b.iter(|| {
                     filter::filter_process_int_c(
@@ -147,7 +147,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
             group.bench_function("Rust/Interleaved", |b| {
                 b.iter(|| {
                     f.process(
-                        black_box(ebur128::Interleaved::new(&*data, 2).unwrap()),
+                        black_box(ebur128::Interleaved::new(&data, 2).unwrap()),
                         black_box(&mut data_out),
                         black_box(0),
                         black_box(&channel_map),
@@ -191,7 +191,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
 
         #[cfg(feature = "c-tests")]
         unsafe {
-            let f = filter::filter_create_c(48_000, 2, if *sample_peak { 1 } else { 0 }, 0);
+            let f = filter::filter_create_c(48_000, 2, i32::from(*sample_peak), 0);
             group.bench_function("C", |b| {
                 b.iter(|| {
                     filter::filter_process_float_c(
@@ -211,7 +211,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
             group.bench_function("Rust/Interleaved", |b| {
                 b.iter(|| {
                     f.process(
-                        black_box(ebur128::Interleaved::new(&*data, 2).unwrap()),
+                        black_box(ebur128::Interleaved::new(&data, 2).unwrap()),
                         black_box(&mut data_out),
                         black_box(0),
                         black_box(&channel_map),
@@ -255,7 +255,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
 
         #[cfg(feature = "c-tests")]
         unsafe {
-            let f = filter::filter_create_c(48_000, 2, if *sample_peak { 1 } else { 0 }, 0);
+            let f = filter::filter_create_c(48_000, 2, i32::from(*sample_peak), 0);
             group.bench_function("C", |b| {
                 b.iter(|| {
                     filter::filter_process_double_c(
@@ -275,7 +275,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
             group.bench_function("Rust/Interleaved", |b| {
                 b.iter(|| {
                     f.process(
-                        black_box(ebur128::Interleaved::new(&*data, 2).unwrap()),
+                        black_box(ebur128::Interleaved::new(&data, 2).unwrap()),
                         black_box(&mut data_out),
                         black_box(0),
                         black_box(&channel_map),

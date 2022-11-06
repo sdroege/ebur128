@@ -155,11 +155,11 @@ impl Filter {
     }
 
     pub fn sample_peak(&self) -> &[f64] {
-        &*self.sample_peak
+        &self.sample_peak
     }
 
     pub fn true_peak(&self) -> &[f64] {
-        &*self.true_peak
+        &self.true_peak
     }
 
     pub fn process<'a, T: Sample + 'a, S: crate::Samples<'a, T>>(
@@ -243,7 +243,7 @@ impl Filter {
 
             if let Some(ref mut tp) = self.tp {
                 assert!(self.true_peak.len() == self.channels as usize);
-                tp.check_true_peak(src, &mut *self.true_peak);
+                tp.check_true_peak(src, &mut self.true_peak);
             }
         });
     }
@@ -579,8 +579,8 @@ mod tests {
             let f = filter_create_c(
                 signal.rate,
                 signal.channels,
-                if calculate_sample_peak { 1 } else { 0 },
-                if calculate_true_peak { 1 } else { 0 },
+                i32::from(calculate_sample_peak),
+                i32::from(calculate_true_peak),
             );
             filter_process_short_c(
                 f,
@@ -667,8 +667,8 @@ mod tests {
             let f = filter_create_c(
                 signal.rate,
                 signal.channels,
-                if calculate_sample_peak { 1 } else { 0 },
-                if calculate_true_peak { 1 } else { 0 },
+                i32::from(calculate_sample_peak),
+                i32::from(calculate_true_peak),
             );
             filter_process_int_c(
                 f,
@@ -755,8 +755,8 @@ mod tests {
             let f = filter_create_c(
                 signal.rate,
                 signal.channels,
-                if calculate_sample_peak { 1 } else { 0 },
-                if calculate_true_peak { 1 } else { 0 },
+                i32::from(calculate_sample_peak),
+                i32::from(calculate_true_peak),
             );
             filter_process_float_c(
                 f,
@@ -843,8 +843,8 @@ mod tests {
             let f = filter_create_c(
                 signal.rate,
                 signal.channels,
-                if calculate_sample_peak { 1 } else { 0 },
-                if calculate_true_peak { 1 } else { 0 },
+                i32::from(calculate_sample_peak),
+                i32::from(calculate_true_peak),
             );
             filter_process_double_c(
                 f,

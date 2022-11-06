@@ -412,7 +412,7 @@ impl History {
 
                 combined.sort_unstable_by(|a, b| a.partial_cmp(b).unwrap());
 
-                Ok(Queue::loudness_range(&*combined))
+                Ok(Queue::loudness_range(&combined))
             }
         }
     }
@@ -483,7 +483,7 @@ mod tests {
         let val = hist.gated_loudness();
 
         let val_c = unsafe {
-            let hist_c = history_create_c(if use_histogram { 1 } else { 0 }, max.get() as usize);
+            let hist_c = history_create_c(i32::from(use_histogram), max.get() as usize);
             for e in &energy {
                 history_add_c(hist_c, e.0);
             }
@@ -516,7 +516,7 @@ mod tests {
         let val = hist.relative_threshold();
 
         let val_c = unsafe {
-            let hist_c = history_create_c(if use_histogram { 1 } else { 0 }, max.get() as usize);
+            let hist_c = history_create_c(i32::from(use_histogram), max.get() as usize);
             for e in &energy {
                 history_add_c(hist_c, e.0);
             }
@@ -549,7 +549,7 @@ mod tests {
         let val = hist.loudness_range();
 
         let val_c = unsafe {
-            let hist_c = history_create_c(if use_histogram { 1 } else { 0 }, max.get() as usize);
+            let hist_c = history_create_c(i32::from(use_histogram), max.get() as usize);
             for e in &energy {
                 history_add_c(hist_c, e.0);
             }

@@ -494,7 +494,7 @@ mod tests {
         };
 
         if !float_eq!(val, val_c, ulps <= 2) {
-            Err(format!("{} != {}", val, val_c))
+            Err(format!("{val} != {val_c}"))
         } else {
             Ok(())
         }
@@ -527,7 +527,7 @@ mod tests {
         };
 
         if !float_eq!(val, val_c, ulps <= 2) {
-            Err(format!("{} != {}", val, val_c))
+            Err(format!("{val} != {val_c}"))
         } else {
             Ok(())
         }
@@ -560,7 +560,7 @@ mod tests {
         };
 
         if !float_eq!(val, val_c, ulps <= 2) {
-            Err(format!("{} != {}", val, val_c))
+            Err(format!("{val} != {val_c}"))
         } else {
             Ok(())
         }

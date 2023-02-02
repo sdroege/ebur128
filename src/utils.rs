@@ -257,7 +257,7 @@ impl Sample for f64 {
 
     #[inline(always)]
     fn as_f64_raw(self) -> f64 {
-        self as f64
+        self
     }
 }
 impl Sample for i16 {

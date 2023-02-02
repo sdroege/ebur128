@@ -59,7 +59,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
             accumulator += step;
         }
 
-        let mut group = c.benchmark_group(format!("filter process: 48kHz 2ch i16{}", name));
+        let mut group = c.benchmark_group(format!("filter process: 48kHz 2ch i16{name}"));
 
         #[cfg(feature = "c-tests")]
         unsafe {
@@ -123,7 +123,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
             accumulator += step;
         }
 
-        let mut group = c.benchmark_group(format!("filter process: 48kHz 2ch i32{}", name));
+        let mut group = c.benchmark_group(format!("filter process: 48kHz 2ch i32{name}"));
 
         #[cfg(feature = "c-tests")]
         unsafe {
@@ -187,7 +187,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
             accumulator += step;
         }
 
-        let mut group = c.benchmark_group(format!("filter process: 48kHz 2ch f32{}", name));
+        let mut group = c.benchmark_group(format!("filter process: 48kHz 2ch f32{name}"));
 
         #[cfg(feature = "c-tests")]
         unsafe {
@@ -251,7 +251,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
             accumulator += step;
         }
 
-        let mut group = c.benchmark_group(format!("filter process: 48kHz 2ch f64{}", name));
+        let mut group = c.benchmark_group(format!("filter process: 48kHz 2ch f64{name}"));
 
         #[cfg(feature = "c-tests")]
         unsafe {

@@ -16,7 +16,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
     drop(black_box(history::History::new(true, 0)));
 
     for (histogram, name) in &[(true, "Histogram"), (false, "Queue")] {
-        let mut group = c.benchmark_group(format!("history add: 1M {}", name));
+        let mut group = c.benchmark_group(format!("history add: 1M {name}"));
         #[cfg(feature = "c-tests")]
         {
             group.bench_function("C", |b| {
@@ -41,7 +41,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
         });
         group.finish();
 
-        let mut group = c.benchmark_group(format!("history gated loudness: 1M {}", name));
+        let mut group = c.benchmark_group(format!("history gated loudness: 1M {name}"));
         #[cfg(feature = "c-tests")]
         unsafe {
             let hist = history::history_create_c(i32::from(*histogram), 100_000);
@@ -73,7 +73,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
         }
         group.finish();
 
-        let mut group = c.benchmark_group(format!("history relative threshold: 1M {}", name));
+        let mut group = c.benchmark_group(format!("history relative threshold: 1M {name}"));
         #[cfg(feature = "c-tests")]
         unsafe {
             let hist = history::history_create_c(i32::from(*histogram), 100_000);
@@ -105,7 +105,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
         }
         group.finish();
 
-        let mut group = c.benchmark_group(format!("history loudness range: 1M {}", name));
+        let mut group = c.benchmark_group(format!("history loudness range: 1M {name}"));
         #[cfg(feature = "c-tests")]
         unsafe {
             let hist = history::history_create_c(i32::from(*histogram), 100_000);

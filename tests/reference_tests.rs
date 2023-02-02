@@ -365,7 +365,7 @@ fn seq_3341_9() {
 fn seq_3341_10() {
     for i in 1..=20 {
         let (mut e, samples) = prepare_file!(
-            format!("seq-3341-10-{}-24bit.wav", i),
+            format!("seq-3341-10-{i}-24bit.wav"),
             48_000,
             24,
             ebur128::Mode::S,

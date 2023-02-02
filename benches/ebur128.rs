@@ -109,7 +109,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
         #[cfg(feature = "c-tests")]
         let mode_c = *mode_c;
 
-        let mut group = c.benchmark_group(format!("ebur128 create: 48kHz 2ch {}", name));
+        let mut group = c.benchmark_group(format!("ebur128 create: 48kHz 2ch {name}"));
 
         #[cfg(feature = "c-tests")]
         {
@@ -147,7 +147,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
             accumulator += step;
         }
 
-        let mut group = c.benchmark_group(format!("ebur128 process: 48kHz i16 2ch {}", name));
+        let mut group = c.benchmark_group(format!("ebur128 process: 48kHz i16 2ch {name}"));
 
         #[cfg(feature = "c-tests")]
         {
@@ -199,7 +199,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
             accumulator += step;
         }
 
-        let mut group = c.benchmark_group(format!("ebur128 process: 48kHz i32 2ch {}", name));
+        let mut group = c.benchmark_group(format!("ebur128 process: 48kHz i32 2ch {name}"));
 
         #[cfg(feature = "c-tests")]
         {
@@ -251,7 +251,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
             accumulator += step;
         }
 
-        let mut group = c.benchmark_group(format!("ebur128 process: 48kHz f32 2ch {}", name));
+        let mut group = c.benchmark_group(format!("ebur128 process: 48kHz f32 2ch {name}"));
 
         #[cfg(feature = "c-tests")]
         {
@@ -303,7 +303,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
             accumulator += step;
         }
 
-        let mut group = c.benchmark_group(format!("ebur128 process: 48kHz f64 2ch {}", name));
+        let mut group = c.benchmark_group(format!("ebur128 process: 48kHz f64 2ch {name}"));
 
         #[cfg(feature = "c-tests")]
         {

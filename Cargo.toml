@@ -54,6 +54,7 @@ generation = false
 
 [package.metadata.capi.pkg_config]
 name = "libebur128"
+filename = "libebur128"
 description = "EBU R 128 standard for loudness normalisation"
 version = "1.2.6"
 

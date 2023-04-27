@@ -7,6 +7,17 @@ specifically the [variant used by Rust](http://doc.crates.io/manifest.html#the-v
 
 ## [Unreleased] - TBD
 
+## [0.1.8] - 2023-04-27
+### Fixed
+- Revert usage of `slice::copy_within()` as this causes a 20-35% slowdown due
+  to the compiler not being able to optimize the code as much as before.
+- Use correct pkg-config filename.
+
+### Changed
+- Sync C header version with the C implementation.
+- Fix various new clippy warnings.
+- Use const generics to clean up some code.
+
 ## [0.1.7] - 2022-10-28
 ### Changed
 - Various internal refactors / cleanups.
@@ -90,7 +101,8 @@ specifically the [variant used by Rust](http://doc.crates.io/manifest.html#the-v
 ## 0.1.0 - 2020-01-06
 - Initial release of ebur128.
 
-[Unreleased]: https://github.com/sdroege/ebur128/compare/0.1.7...HEAD
+[Unreleased]: https://github.com/sdroege/ebur128/compare/0.1.8...HEAD
+[0.1.8]: https://github.com/sdroege/ebur128/compare/0.1.7...0.1.8
 [0.1.7]: https://github.com/sdroege/ebur128/compare/0.1.6...0.1.7
 [0.1.6]: https://github.com/sdroege/ebur128/compare/0.1.5...0.1.6
 [0.1.5]: https://github.com/sdroege/ebur128/compare/0.1.4...0.1.5

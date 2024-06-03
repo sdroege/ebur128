@@ -379,13 +379,16 @@ impl Filter {
 ))]
 mod ftz {
     #[cfg(target_arch = "x86")]
+    #[allow(deprecated)]
     use std::arch::x86::{_mm_getcsr, _mm_setcsr, _MM_FLUSH_ZERO_ON};
     #[cfg(target_arch = "x86_64")]
+    #[allow(deprecated)]
     use std::arch::x86_64::{_mm_getcsr, _mm_setcsr, _MM_FLUSH_ZERO_ON};
 
     pub struct Ftz(u32);
 
     impl Ftz {
+        #[allow(deprecated)]
         unsafe fn new() -> Self {
             let csr = _mm_getcsr();
             _mm_setcsr(csr | _MM_FLUSH_ZERO_ON);
@@ -394,6 +397,7 @@ mod ftz {
     }
 
     impl Drop for Ftz {
+        #[allow(deprecated)]
         fn drop(&mut self) {
             unsafe {
                 _mm_setcsr(self.0);

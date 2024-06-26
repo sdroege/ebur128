@@ -2328,4 +2328,75 @@ mod tests {
 
         compare_results(&ebu, &ebu_c, signal.channels);
     }
+
+    #[test]
+    fn infinity_handling() {
+        let mut data = vec![0.0f32; 44_100 * 80];
+        for out in data.chunks_exact_mut(2) {
+            out[0] = f32::INFINITY;
+            out[1] = f32::NEG_INFINITY;
+        }
+
+        let mut ebu = EbuR128::new(2, 44_100, Mode::all() - Mode::HISTOGRAM).unwrap();
+        assert!(ebu.add_frames_f32(&data).is_ok());
+        assert_eq!(ebu.sample_peak(0).unwrap().abs(), f64::INFINITY);
+        assert_eq!(ebu.true_peak(0).unwrap().abs(), f64::INFINITY);
+        assert!(ebu.loudness_global().unwrap().is_nan());
+        assert!(ebu.loudness_momentary().unwrap().is_nan());
+        assert!(ebu.energy_shortterm().unwrap().is_nan());
+        assert!(ebu.loudness_shortterm().unwrap().is_nan());
+        assert!(ebu.loudness_range().unwrap().is_nan());
+        assert!(ebu.relative_threshold().unwrap().is_nan());
+
+        // With histogram mode the first bin is taken for NaN
+        let mut ebu = EbuR128::new(2, 44_100, Mode::all()).unwrap();
+        assert!(ebu.add_frames_f32(&data).is_ok());
+        assert_eq!(ebu.sample_peak(0).unwrap().abs(), f64::INFINITY);
+        assert_eq!(ebu.true_peak(0).unwrap().abs(), f64::INFINITY);
+        assert_float_eq!(ebu.loudness_global().unwrap(), -69.95, abs <= 0.000_000_1);
+        assert!(ebu.loudness_momentary().unwrap().is_nan());
+        assert!(ebu.energy_shortterm().unwrap().is_nan());
+        assert!(ebu.loudness_shortterm().unwrap().is_nan(),);
+        assert_float_eq!(ebu.loudness_range().unwrap(), 0.0, abs <= 0.000_000_1);
+        assert_float_eq!(
+            ebu.relative_threshold().unwrap(),
+            -79.95,
+            abs <= 0.000_000_1
+        );
+    }
+
+    #[test]
+    fn nan_handling() {
+        let mut data = vec![0.0f32; 44_100 * 80];
+        for out in data.chunks_exact_mut(2) {
+            out[0] = f32::NAN;
+            out[1] = f32::NAN;
+        }
+
+        let mut ebu = EbuR128::new(2, 44_100, Mode::all() - Mode::HISTOGRAM).unwrap();
+        assert!(ebu.add_frames_f32(&data).is_ok());
+        assert_float_eq!(ebu.sample_peak(0).unwrap(), 0.0, abs <= f64::EPSILON);
+        assert_float_eq!(ebu.true_peak(0).unwrap(), 0.0, abs <= f64::EPSILON);
+        assert!(ebu.loudness_global().unwrap().is_nan());
+        assert!(ebu.loudness_momentary().unwrap().is_nan());
+        assert!(ebu.energy_shortterm().unwrap().is_nan());
+        assert!(ebu.loudness_shortterm().unwrap().is_nan());
+        assert!(ebu.relative_threshold().unwrap().is_nan());
+
+        // With histogram mode the first bin is taken for NaN
+        let mut ebu = EbuR128::new(2, 44_100, Mode::all()).unwrap();
+        assert!(ebu.add_frames_f32(&data).is_ok());
+        assert_float_eq!(ebu.sample_peak(0).unwrap(), 0.0, abs <= f64::EPSILON);
+        assert_float_eq!(ebu.true_peak(0).unwrap(), 0.0, abs <= f64::EPSILON);
+        assert_float_eq!(ebu.loudness_global().unwrap(), -69.95, abs <= 0.000_000_1);
+        assert!(ebu.loudness_momentary().unwrap().is_nan());
+        assert!(ebu.energy_shortterm().unwrap().is_nan());
+        assert!(ebu.loudness_shortterm().unwrap().is_nan(),);
+        assert_float_eq!(ebu.loudness_range().unwrap(), 0.0, abs <= 0.000_000_1);
+        assert_float_eq!(
+            ebu.relative_threshold().unwrap(),
+            -79.95,
+            abs <= 0.000_000_1
+        );
+    }
 }

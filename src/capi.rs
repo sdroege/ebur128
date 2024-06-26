@@ -79,7 +79,10 @@ pub unsafe extern "C" fn ebur128_set_channel(
     let s = &mut *state;
     let e = &mut *s.internal;
 
-    match e.set_channel(channel_number, mem::transmute(value)) {
+    match e.set_channel(
+        channel_number,
+        mem::transmute::<i32, ebur128::Channel>(value),
+    ) {
         Err(err) => err.into(),
         Ok(_) => 0,
     }

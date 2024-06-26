@@ -297,7 +297,7 @@ impl EbuR128 {
         let sample_peak = vec![0.0; channels as usize];
         let true_peak = vec![0.0; channels as usize];
 
-        let history = std::usize::MAX;
+        let history = usize::MAX;
         let samples_in_100ms = (rate as usize + 5) / 10;
 
         let window = if mode.contains(Mode::S) {
@@ -814,7 +814,7 @@ impl EbuR128 {
         let energy = self.energy_in_interval(self.samples_in_100ms * 4)?;
 
         if energy <= 0.0 {
-            return Ok(-std::f64::INFINITY);
+            return Ok(-f64::INFINITY);
         }
 
         Ok(energy_to_loudness(energy))
@@ -829,7 +829,7 @@ impl EbuR128 {
         let energy = self.energy_shortterm()?;
 
         if energy <= 0.0 {
-            return Ok(-std::f64::INFINITY);
+            return Ok(-f64::INFINITY);
         }
 
         Ok(energy_to_loudness(energy))
@@ -847,7 +847,7 @@ impl EbuR128 {
         let energy = self.energy_in_interval(interval_frames)?;
 
         if energy <= 0.0 {
-            return Ok(-std::f64::INFINITY);
+            return Ok(-f64::INFINITY);
         }
 
         Ok(energy_to_loudness(energy))
@@ -1009,7 +1009,7 @@ mod tests {
         let mut accumulator = 0.0;
         let step = 2.0 * std::f32::consts::PI * 440.0 / 48_000.0;
         for out in data.chunks_exact_mut(2) {
-            let val = f32::sin(accumulator) * (std::i16::MAX - 1) as f32;
+            let val = f32::sin(accumulator) * (i16::MAX - 1) as f32;
             out[0] = val as i16;
             out[1] = val as i16;
             accumulator += step;
@@ -1092,22 +1092,22 @@ mod tests {
 
         assert_float_eq!(
             ebu.loudness_global().unwrap(),
-            -std::f64::INFINITY,
+            -f64::INFINITY,
             abs <= 0.000001
         );
         assert_float_eq!(
             ebu.loudness_momentary().unwrap(),
-            -std::f64::INFINITY,
+            -f64::INFINITY,
             abs <= 0.000001
         );
         assert_float_eq!(
             ebu.loudness_shortterm().unwrap(),
-            -std::f64::INFINITY,
+            -f64::INFINITY,
             abs <= 0.000001
         );
         assert_float_eq!(
             ebu.loudness_window(1).unwrap(),
-            -std::f64::INFINITY,
+            -f64::INFINITY,
             abs <= 0.000001
         );
         assert_float_eq!(ebu.loudness_range().unwrap(), 0.0, abs <= 0.000001);
@@ -1131,7 +1131,7 @@ mod tests {
         let mut accumulator = 0.0;
         let step = 2.0 * std::f32::consts::PI * 440.0 / 48_000.0;
         for out in data.chunks_exact_mut(2) {
-            let val = f32::sin(accumulator) * (std::i32::MAX - 1) as f32;
+            let val = f32::sin(accumulator) * (i32::MAX - 1) as f32;
             out[0] = val as i32;
             out[1] = val as i32;
             accumulator += step;
@@ -1341,7 +1341,7 @@ mod tests {
         let mut accumulator = 0.0;
         let step = 2.0 * std::f32::consts::PI * 440.0 / 48_000.0;
         for out in data.chunks_exact_mut(2) {
-            let val = f32::sin(accumulator) * (std::i16::MAX - 1) as f32;
+            let val = f32::sin(accumulator) * (i16::MAX - 1) as f32;
             out[0] = val as i16;
             out[1] = val as i16;
             accumulator += step;
@@ -1431,7 +1431,7 @@ mod tests {
         let mut accumulator = 0.0;
         let step = 2.0 * std::f32::consts::PI * 440.0 / 48_000.0;
         for out in data.chunks_exact_mut(2) {
-            let val = f32::sin(accumulator) * (std::i32::MAX - 1) as f32;
+            let val = f32::sin(accumulator) * (i32::MAX - 1) as f32;
             out[0] = val as i32;
             out[1] = val as i32;
             accumulator += step;
@@ -1654,7 +1654,7 @@ mod tests {
         let step = 2.0 * std::f32::consts::PI * 440.0 / 48_000.0;
         let (fst, snd) = data.split_at_mut(48_000 * 5);
         for (fst, snd) in Iterator::zip(fst.iter_mut(), snd.iter_mut()) {
-            let val = f32::sin(accumulator) * (std::i16::MAX - 1) as f32;
+            let val = f32::sin(accumulator) * (i16::MAX - 1) as f32;
             *fst = val as i16;
             *snd = val as i16;
             accumulator += step;
@@ -1745,7 +1745,7 @@ mod tests {
         let step = 2.0 * std::f32::consts::PI * 440.0 / 48_000.0;
         let (fst, snd) = data.split_at_mut(48_000 * 5);
         for (fst, snd) in Iterator::zip(fst.iter_mut(), snd.iter_mut()) {
-            let val = f32::sin(accumulator) * (std::i32::MAX - 1) as f32;
+            let val = f32::sin(accumulator) * (i32::MAX - 1) as f32;
             *fst = val as i32;
             *snd = val as i32;
             accumulator += step;

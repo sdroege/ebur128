@@ -139,7 +139,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
             data.chunks_exact_mut(2),
             Iterator::zip(fst.iter_mut(), snd.iter_mut()),
         ) {
-            let val = f32::sin(accumulator) * std::i16::MAX as f32;
+            let val = f32::sin(accumulator) * i16::MAX as f32;
             out[0] = val as i16;
             out[1] = val as i16;
             *fst = val as i16;
@@ -191,7 +191,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
             data.chunks_exact_mut(2),
             Iterator::zip(fst.iter_mut(), snd.iter_mut()),
         ) {
-            let val = f32::sin(accumulator) * std::i32::MAX as f32;
+            let val = f32::sin(accumulator) * i32::MAX as f32;
             out[0] = val as i32;
             out[1] = val as i32;
             *fst = val as i32;

@@ -289,7 +289,7 @@ impl History {
         });
 
         if above_thresh_counter == 0 {
-            return -std::f64::INFINITY;
+            return -f64::INFINITY;
         }
 
         if relative_threshold.is_nan() {
@@ -338,7 +338,7 @@ impl History {
         }
 
         if above_thresh_counter == 0 {
-            return -std::f64::INFINITY;
+            return -f64::INFINITY;
         }
 
         energy_to_loudness(gated_loudness / above_thresh_counter as f64)

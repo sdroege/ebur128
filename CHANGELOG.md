@@ -7,6 +7,14 @@ specifically the [variant used by Rust](http://doc.crates.io/manifest.html#the-v
 
 ## [Unreleased] - TBD
 
+## [0.1.9] - 2024-06-26
+### Fixed
+- Avoid panic and non-sensical results if invalid (NaN or infinity) samples
+  are provided and also enfore this behaviour with tests.
+
+### Changed
+- Document Rust 1.60 as MSRV and check for this on the CI.
+
 ## [0.1.8] - 2023-04-27
 ### Fixed
 - Revert usage of `slice::copy_within()` as this causes a 20-35% slowdown due
@@ -101,7 +109,8 @@ specifically the [variant used by Rust](http://doc.crates.io/manifest.html#the-v
 ## 0.1.0 - 2020-01-06
 - Initial release of ebur128.
 
-[Unreleased]: https://github.com/sdroege/ebur128/compare/0.1.8...HEAD
+[Unreleased]: https://github.com/sdroege/ebur128/compare/0.1.9...HEAD
+[0.1.9]: https://github.com/sdroege/ebur128/compare/0.1.8...0.1.9
 [0.1.8]: https://github.com/sdroege/ebur128/compare/0.1.7...0.1.8
 [0.1.7]: https://github.com/sdroege/ebur128/compare/0.1.6...0.1.7
 [0.1.6]: https://github.com/sdroege/ebur128/compare/0.1.5...0.1.6

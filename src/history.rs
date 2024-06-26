@@ -97,6 +97,10 @@ impl Histogram {
             return 0.0;
         }
 
+        if power.is_nan() {
+            return f64::NAN;
+        }
+
         power /= size as f64;
         let minus_twenty_decibels = f64::powf(10.0, -20.0 / 10.0);
         let integrated = minus_twenty_decibels * power;
@@ -288,6 +292,10 @@ impl History {
             return -std::f64::INFINITY;
         }
 
+        if relative_threshold.is_nan() {
+            return f64::NAN;
+        }
+
         let relative_gate = -10.0;
         let relative_gate_factor = f64::powf(10.0, relative_gate / 10.0);
         let relative_threshold =
@@ -341,6 +349,10 @@ impl History {
 
         if above_thresh_counter == 0 {
             return -70.0;
+        }
+
+        if relative_threshold.is_nan() {
+            return f64::NAN;
         }
 
         let relative_gate = -10.0;
@@ -410,7 +422,20 @@ impl History {
                     }
                 }
 
-                combined.sort_unstable_by(|a, b| a.partial_cmp(b).unwrap());
+                let mut contains_nan = false;
+                combined.sort_unstable_by(|a, b| {
+                    if let Some(ord) = a.partial_cmp(b) {
+                        ord
+                    } else {
+                        contains_nan = true;
+
+                        a.is_nan().cmp(&b.is_nan())
+                    }
+                });
+
+                if contains_nan {
+                    return Ok(f64::NAN);
+                }
 
                 Ok(Queue::loudness_range(&combined))
             }

@@ -1,4 +1,4 @@
-use ebur128::{EbuR128, Mode};
+use ebur128::{energy_to_loudness, EbuR128, Mode};
 use hound::WavReader;
 use std::path::Path;
 
@@ -9,12 +9,21 @@ use std::path::Path;
 /// [rg2spec]: https://wiki.hydrogenaud.io/index.php?title=ReplayGain_2.0_specification#Reference_level
 const REPLAYGAIN2_REFERENCE_LUFS: f64 = -18.0;
 
+struct TrackData {
+    pub loudness: f64,
+    pub peak: f64,
+    pub gating_block_count: u64,
+    pub energy: f64,
+}
+
 fn main() {
     let input_path = std::env::args()
         .nth(1)
         .expect("Please specify input wav directory path");
 
     let mut album_peak: f64 = 0.0;
+    let mut album_gating_block_count: u64 = 0;
+    let mut album_energy: f64 = 0.0;
 
     for dir_entry in std::fs::read_dir(&input_path).expect("Failed to read directory path") {
         let dir_entry = dir_entry.expect("Failed to read dir entry");
@@ -23,8 +32,9 @@ fn main() {
             continue;
         }
 
-        let (track_loudness, track_peak) = analyze_file(&dir_entry.path());
-        let track_gain = REPLAYGAIN2_REFERENCE_LUFS - track_loudness;
+        let track_data = analyze_file(&dir_entry.path());
+        let track_gain = REPLAYGAIN2_REFERENCE_LUFS - track_data.loudness;
+        let track_peak = track_data.peak;
 
         println!("TRACK_PATH={}", dir_entry.path().display());
 
@@ -42,14 +52,20 @@ fn main() {
         println!();
 
         // Album peak is just the maximum peak on the album.
-        album_peak = album_peak.max(track_peak)
+        album_peak = album_peak.max(track_peak);
+        album_gating_block_count += track_data.gating_block_count;
+        album_energy += track_data.energy;
     }
 
+    let album_gain = REPLAYGAIN2_REFERENCE_LUFS
+        - energy_to_loudness(album_energy / album_gating_block_count as f64);
+
+    println!("REPLAYGAIN_ALBUM_GAIN={album_gain:.2} dB");
     println!("REPLAYGAIN_ALBUM_PEAK={album_peak:.6}");
     println!("REPLAYGAIN_REFERNCE_LOUDNESS={REPLAYGAIN2_REFERENCE_LUFS:.2} LUFS");
 }
 
-fn analyze_file(input_path: &Path) -> (f64, f64) {
+fn analyze_file(input_path: &Path) -> TrackData {
     let mut reader = WavReader::open(input_path).expect("Failed to open WAV file");
 
     let spec = reader.spec();
@@ -72,13 +88,21 @@ fn analyze_file(input_path: &Path) -> (f64, f64) {
             .expect("Failed to get global loudness");
     }
 
-    let global_loudness = ebur128
+    let loudness = ebur128
         .loudness_global()
         .expect("Failed to get global loudness");
     let peak = (0..channels)
         .map(|channel_index| ebur128.sample_peak(channel_index as u32))
         .try_fold(0.0f64, |a, b| b.map(|b| a.max(b)))
         .expect("Failed to determine peak");
+    let (gating_block_count, energy) = ebur128
+        .gating_block_count_and_energy()
+        .expect("failed to get gating block count and loudness");
 
-    (global_loudness, peak)
+    TrackData {
+        loudness,
+        peak,
+        gating_block_count,
+        energy,
+    }
 }

@@ -982,6 +982,13 @@ impl EbuR128 {
 
         Ok(self.block_energy_history.relative_threshold())
     }
+
+    /// Get the number of gating blocks and the energy.
+    pub fn gating_block_count_and_energy(&self) -> Option<(u64, f64)> {
+        self.block_energy_history
+            .gating_block_count_and_energy()
+            .ok()
+    }
 }
 
 #[cfg(test)]

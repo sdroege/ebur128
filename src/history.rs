@@ -219,6 +219,24 @@ impl Queue {
     }
 }
 
+#[derive(Debug)]
+pub enum HistoryError {
+    NoBlocksAboveThreshold,
+    RelativeThresholdIsNan,
+}
+
+impl std::error::Error for HistoryError {}
+
+impl fmt::Display for HistoryError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let message = match &self {
+            Self::NoBlocksAboveThreshold => "no blocks above threshold",
+            Self::RelativeThresholdIsNan => "relative threshold is NaN",
+        };
+        write!(f, "{message}")
+    }
+}
+
 /// History of measured energies, either as histogram or a vector.
 pub enum History {
     Queue(Queue),
@@ -279,7 +297,10 @@ impl History {
         Self::gated_loudness_multiple(&[self])
     }
 
-    pub fn gated_loudness_multiple(s: &[&Self]) -> f64 {
+    /// Returns an Iterator over (gating_block_count, loudness) tuples.
+    pub fn iter_gating_block_count_and_energy<'a>(
+        s: &'a [&'a Self],
+    ) -> Result<impl Iterator<Item = (u64, f64)> + 'a, HistoryError> {
         let (above_thresh_counter, relative_threshold) = s.iter().fold((0, 0.0), |mut acc, h| {
             let (above_thresh_counter, relative_threshold) = h.calc_relative_threshold();
             acc.0 += above_thresh_counter;
@@ -289,20 +310,17 @@ impl History {
         });
 
         if above_thresh_counter == 0 {
-            return -f64::INFINITY;
+            return Err(HistoryError::NoBlocksAboveThreshold);
         }
 
         if relative_threshold.is_nan() {
-            return f64::NAN;
+            return Err(HistoryError::RelativeThresholdIsNan);
         }
 
         let relative_gate = -10.0;
         let relative_gate_factor = f64::powf(10.0, relative_gate / 10.0);
         let relative_threshold =
             (relative_threshold / above_thresh_counter as f64) * relative_gate_factor;
-
-        let mut above_thresh_counter = 0;
-        let mut gated_loudness = 0.0;
 
         let start_index = if relative_threshold < HISTOGRAM_BOUNDARIES[0] {
             0
@@ -315,33 +333,68 @@ impl History {
             }
         };
 
-        for h in s {
+        Ok(s.iter().flat_map(move |h| {
+            let mut histogram_iterator = None;
+            let mut queue_iterator = None;
             match h {
                 History::Histogram(ref h) => {
-                    for (count, energy) in Iterator::zip(
-                        h.0[start_index..].iter(),
-                        HISTOGRAM_ENERGIES[start_index..].iter(),
-                    ) {
-                        gated_loudness += *count as f64 * *energy;
-                        above_thresh_counter += *count;
-                    }
+                    histogram_iterator = Some(
+                        Iterator::zip(
+                            h.0[start_index..].iter(),
+                            HISTOGRAM_ENERGIES[start_index..].iter(),
+                        )
+                        .map(|(count, energy)| {
+                            let loudness = *count as f64 * *energy;
+                            (*count, loudness)
+                        }),
+                    )
                 }
                 History::Queue(ref q) => {
-                    for v in q.queue.iter() {
-                        if *v >= relative_threshold {
-                            above_thresh_counter += 1;
-                            gated_loudness += *v;
+                    queue_iterator = Some(q.queue.iter().filter_map(move |loudness| {
+                        if *loudness >= relative_threshold {
+                            Some((1, *loudness))
+                        } else {
+                            None
                         }
-                    }
+                    }))
                 }
             }
-        }
+            histogram_iterator
+                .into_iter()
+                .flatten()
+                .chain(queue_iterator.into_iter().flatten())
+        }))
+    }
 
-        if above_thresh_counter == 0 {
-            return -f64::INFINITY;
+    pub fn gated_loudness_multiple(s: &[&Self]) -> f64 {
+        match Self::gating_block_count_and_energy_multiple(s) {
+            Ok((above_thresh_counter, gated_loudness)) => {
+                energy_to_loudness(gated_loudness / above_thresh_counter as f64)
+            }
+            Err(HistoryError::NoBlocksAboveThreshold) => -f64::INFINITY,
+            Err(HistoryError::RelativeThresholdIsNan) => f64::NAN,
         }
+    }
 
-        energy_to_loudness(gated_loudness / above_thresh_counter as f64)
+    pub fn gating_block_count_and_energy(&self) -> Result<(u64, f64), HistoryError> {
+        Self::gating_block_count_and_energy_multiple(&[self])
+    }
+
+    pub fn gating_block_count_and_energy_multiple(s: &[&Self]) -> Result<(u64, f64), HistoryError> {
+        Self::iter_gating_block_count_and_energy(s).and_then(|iter| {
+            let (above_thresh_counter, gated_loudness) = iter.fold(
+                (0u64, 0.0f64),
+                |(total_count, total_loudness), (count, loudness)| {
+                    (total_count + count, total_loudness + loudness)
+                },
+            );
+
+            if above_thresh_counter == 0 {
+                Err(HistoryError::NoBlocksAboveThreshold)
+            } else {
+                Ok((above_thresh_counter, gated_loudness))
+            }
+        })
     }
 
     pub fn relative_threshold(&self) -> f64 {

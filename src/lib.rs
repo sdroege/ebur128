@@ -36,6 +36,7 @@
 
 mod ebur128;
 pub use self::ebur128::*;
+pub use self::utils::energy_to_loudness;
 
 #[cfg(feature = "internal-tests")]
 pub mod interp;
@@ -66,9 +67,9 @@ pub mod utils;
 pub(crate) mod utils;
 
 #[cfg(feature = "internal-tests")]
-pub use utils::{energy_to_loudness, Interleaved, Planar, Samples};
+pub use utils::{Interleaved, Planar, Samples};
 #[cfg(not(feature = "internal-tests"))]
-pub(crate) use utils::{energy_to_loudness, Interleaved, Planar, Samples};
+pub(crate) use utils::{Interleaved, Planar, Samples};
 
 #[cfg(test)]
 pub mod tests {

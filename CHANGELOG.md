@@ -7,6 +7,13 @@ specifically the [variant used by Rust](http://doc.crates.io/manifest.html#the-v
 
 ## [Unreleased] - TBD
 
+## [0.1.10] - 2024-10-26
+### Added
+- Make `energy_to_loudness()` and `EbuR128::gating_block_count_and_energy()`
+  public.
+- Add example that shows basic usage for loudness normalization and another
+  example that calculates ReplayGain 2.0 track and album again.
+
 ## [0.1.9] - 2024-06-26
 ### Fixed
 - Avoid panic and non-sensical results if invalid (NaN or infinity) samples
@@ -109,7 +116,8 @@ specifically the [variant used by Rust](http://doc.crates.io/manifest.html#the-v
 ## 0.1.0 - 2020-01-06
 - Initial release of ebur128.
 
-[Unreleased]: https://github.com/sdroege/ebur128/compare/0.1.9...HEAD
+[Unreleased]: https://github.com/sdroege/ebur128/compare/0.1.10...HEAD
+[0.1.10]: https://github.com/sdroege/ebur128/compare/0.1.9...0.1.10
 [0.1.9]: https://github.com/sdroege/ebur128/compare/0.1.8...0.1.9
 [0.1.8]: https://github.com/sdroege/ebur128/compare/0.1.7...0.1.8
 [0.1.7]: https://github.com/sdroege/ebur128/compare/0.1.6...0.1.7

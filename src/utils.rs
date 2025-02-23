@@ -148,7 +148,7 @@ impl<'a, S: Sample> Samples<'a, S> for Interleaved<'a, S> {
     }
 }
 
-/// Struct representing interleaved samples.
+/// Struct representing planar samples.
 pub struct Planar<'a, S> {
     data: &'a [&'a [S]],
     start: usize,

@@ -55,18 +55,19 @@ bitflags! {
     ///
     /// Use these values in [`EbuR128::new`](struct.EbuR128.html#method.new). Try to use the lowest
     /// possible modes that suit your needs, as performance will be better.
+    #[derive(Debug, Copy, Clone, PartialEq, Eq)]
     pub struct Mode: u8 {
         /// can call [`EbuR128::loudness_momentary`](struct.EbuR128.html#method.loudness_momentary)
         const M = 0b00000001;
         /// can call [`EbuR128::loudness_shortterm`](struct.EbuR128.html#method.loudness_shortterm)
-        const S = 0b00000010 | Mode::M.bits;
+        const S = 0b00000010 | Mode::M.bits();
         /// can call [`EbuR128::loudness_global`](struct.EbuR128.html#method.loudness_global) and
         /// [`EbuR128::relative_threshold`](struct.EbuR128.html#method.relative_threshold)
-        const I = 0b00000100 | Mode::M.bits;
+        const I = 0b00000100 | Mode::M.bits();
         /// can call [`EbuR128::loudness_range`](struct.EbuR128.html#method.loudness_range)
-        const LRA = 0b00001000 | Mode::S.bits;
+        const LRA = 0b00001000 | Mode::S.bits();
         /// can call [`EbuR128::sample_peak`](struct.EbuR128.html#method.sample_peak)
-        const SAMPLE_PEAK = 0b00010000 | Mode::M.bits;
+        const SAMPLE_PEAK = 0b00010000 | Mode::M.bits();
         /// can call [`EbuR128::true_peak`](struct.EbuR128.html#method.true_peak)
         const TRUE_PEAK = 0b00110001;
         /// uses histogram algorithm to calculate loudness

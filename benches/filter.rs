@@ -30,6 +30,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
                 black_box(2),
                 black_box(false),
                 black_box(false),
+                black_box(true),
             );
             drop(black_box(f));
         })
@@ -79,7 +80,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
         }
 
         {
-            let mut f = filter::Filter::new(48_000, 2, *sample_peak, false);
+            let mut f = filter::Filter::new(48_000, 2, *sample_peak, false, true);
             group.bench_function("Rust/Interleaved", |b| {
                 b.iter(|| {
                     f.process(
@@ -91,7 +92,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
                 })
             });
 
-            let mut f = filter::Filter::new(48_000, 2, *sample_peak, false);
+            let mut f = filter::Filter::new(48_000, 2, *sample_peak, false, true);
             group.bench_function("Rust/Planar", |b| {
                 b.iter(|| {
                     f.process(
@@ -143,7 +144,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
         }
 
         {
-            let mut f = filter::Filter::new(48_000, 2, *sample_peak, false);
+            let mut f = filter::Filter::new(48_000, 2, *sample_peak, false, true);
             group.bench_function("Rust/Interleaved", |b| {
                 b.iter(|| {
                     f.process(
@@ -155,7 +156,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
                 })
             });
 
-            let mut f = filter::Filter::new(48_000, 2, *sample_peak, false);
+            let mut f = filter::Filter::new(48_000, 2, *sample_peak, false, true);
             group.bench_function("Rust/Planar", |b| {
                 b.iter(|| {
                     f.process(
@@ -207,7 +208,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
         }
 
         {
-            let mut f = filter::Filter::new(48_000, 2, *sample_peak, false);
+            let mut f = filter::Filter::new(48_000, 2, *sample_peak, false, true);
             group.bench_function("Rust/Interleaved", |b| {
                 b.iter(|| {
                     f.process(
@@ -219,7 +220,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
                 })
             });
 
-            let mut f = filter::Filter::new(48_000, 2, *sample_peak, false);
+            let mut f = filter::Filter::new(48_000, 2, *sample_peak, false, true);
             group.bench_function("Rust/Planar", |b| {
                 b.iter(|| {
                     f.process(
@@ -271,7 +272,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
         }
 
         {
-            let mut f = filter::Filter::new(48_000, 2, *sample_peak, false);
+            let mut f = filter::Filter::new(48_000, 2, *sample_peak, false, true);
             group.bench_function("Rust/Interleaved", |b| {
                 b.iter(|| {
                     f.process(
@@ -283,7 +284,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
                 })
             });
 
-            let mut f = filter::Filter::new(48_000, 2, *sample_peak, false);
+            let mut f = filter::Filter::new(48_000, 2, *sample_peak, false, true);
             group.bench_function("Rust/Planar", |b| {
                 b.iter(|| {
                     f.process(

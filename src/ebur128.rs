@@ -66,9 +66,9 @@ bitflags! {
         /// can call [`EbuR128::loudness_range`](struct.EbuR128.html#method.loudness_range)
         const LRA = 0b00001000 | Mode::S.bits;
         /// can call [`EbuR128::sample_peak`](struct.EbuR128.html#method.sample_peak)
-        const SAMPLE_PEAK = 0b00010000 | Mode::M.bits;
+        const SAMPLE_PEAK = 0b00010000;
         /// can call [`EbuR128::true_peak`](struct.EbuR128.html#method.true_peak)
-        const TRUE_PEAK = 0b00110001;
+        const TRUE_PEAK = 0b00110000;
         /// uses histogram algorithm to calculate loudness
         const HISTOGRAM = 0b01000000;
     }
@@ -300,15 +300,22 @@ impl EbuR128 {
         let history = usize::MAX;
         let samples_in_100ms = (rate as usize + 5) / 10;
 
+        let calculate_loudness = mode.intersects(Mode::M | Mode::S | Mode::I | Mode::LRA);
         let window = if mode.contains(Mode::S) {
             3000
         } else if mode.contains(Mode::M) {
             400
+        } else if mode.intersects(Mode::SAMPLE_PEAK | Mode::TRUE_PEAK) {
+            0
         } else {
             return Err(Error::InvalidMode);
         };
 
-        let audio_data = Self::allocate_audio_data(channels, rate, window)?;
+        let audio_data = if window > 0 {
+            Self::allocate_audio_data(channels, rate, window)?
+        } else {
+            Vec::new().into_boxed_slice()
+        };
         // start at the beginning of the buffer
         let audio_data_index = 0;
 
@@ -324,6 +331,7 @@ impl EbuR128 {
             channels,
             mode.contains(Mode::SAMPLE_PEAK),
             mode.contains(Mode::TRUE_PEAK),
+            calculate_loudness,
         );
 
         let channel_map = default_channel_map(channels);
@@ -448,7 +456,11 @@ impl EbuR128 {
             return Ok(());
         }
 
-        self.audio_data = Self::allocate_audio_data(channels, rate, self.window)?;
+        self.audio_data = if self.window > 0 {
+            Self::allocate_audio_data(channels, rate, self.window)?
+        } else {
+            Vec::new().into_boxed_slice()
+        };
 
         if self.channels != channels {
             self.channels = channels;
@@ -462,11 +474,15 @@ impl EbuR128 {
             self.samples_in_100ms = (rate as usize + 5) / 10;
         }
 
+        let calculate_loudness = self
+            .mode
+            .intersects(Mode::M | Mode::S | Mode::I | Mode::LRA);
         self.filter = crate::filter::Filter::new(
             rate,
             channels,
             self.mode.contains(Mode::SAMPLE_PEAK),
             self.mode.contains(Mode::TRUE_PEAK),
+            calculate_loudness,
         );
 
         // the first block needs 400ms of audio data

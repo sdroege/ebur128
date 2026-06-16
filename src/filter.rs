@@ -34,6 +34,9 @@ pub struct Filter {
     /// One filter state per channel.
     filter_state: Box<[[f64; 5]]>,
 
+    /// Whether to run the K-weighting biquad and write filtered samples to `dest`.
+    /// Set false for peak-only modes where no loudness energy is ever read.
+    calculate_loudness: bool,
     /// Whether to measure sample peak.
     calculate_sample_peak: bool,
     /// Previously measured sample peak.
@@ -115,6 +118,7 @@ impl Filter {
         channels: u32,
         calculate_sample_peak: bool,
         calculate_true_peak: bool,
+        calculate_loudness: bool,
     ) -> Self {
         assert!(rate > 0);
         assert!(channels > 0);
@@ -132,6 +136,7 @@ impl Filter {
             b,
             a,
             filter_state: vec![[0.0; 5]; channels as usize].into_boxed_slice(),
+            calculate_loudness,
             calculate_sample_peak,
             sample_peak: vec![0.0; channels as usize].into_boxed_slice(),
             tp,
@@ -169,7 +174,6 @@ impl Filter {
         dest_index: usize,
         channel_map: &[crate::ebur128::Channel],
     ) {
-        assert!(dest.len() % self.channels as usize == 0);
         assert!(channel_map.len() == self.channels as usize);
         assert!(src.channels() == self.channels as usize);
         assert!(self.filter_state.len() == self.channels as usize);
@@ -197,48 +201,52 @@ impl Filter {
                 }
             }
 
-            let dest_stride = dest.len() / self.channels as usize;
-            assert!(dest_index + src.frames() <= dest_stride);
+            if self.calculate_loudness {
+                assert!(dest.len() % self.channels as usize == 0);
+                let dest_stride = dest.len() / self.channels as usize;
+                assert!(dest_index + src.frames() <= dest_stride);
 
-            for (c, (channel_map, dest)) in
-                Iterator::zip(channel_map.iter(), dest.chunks_exact_mut(dest_stride)).enumerate()
-            {
-                if *channel_map == crate::ebur128::Channel::Unused {
-                    continue;
-                }
+                for (c, (channel_map, dest)) in
+                    Iterator::zip(channel_map.iter(), dest.chunks_exact_mut(dest_stride))
+                        .enumerate()
+                {
+                    if *channel_map == crate::ebur128::Channel::Unused {
+                        continue;
+                    }
 
-                assert!(c < src.channels());
+                    assert!(c < src.channels());
 
-                let Filter {
-                    ref mut filter_state,
-                    ref a,
-                    ref b,
-                    ..
-                } = *self;
-                let filter_state = &mut filter_state[c];
+                    let Filter {
+                        ref mut filter_state,
+                        ref a,
+                        ref b,
+                        ..
+                    } = *self;
+                    let filter_state = &mut filter_state[c];
 
-                src.foreach_sample_zipped(c, dest[dest_index..].iter_mut(), |src, dest| {
-                    filter_state[0] = (*src).to_sample::<f64>()
-                        - a[1] * filter_state[1]
-                        - a[2] * filter_state[2]
-                        - a[3] * filter_state[3]
-                        - a[4] * filter_state[4];
-                    *dest = b[0] * filter_state[0]
-                        + b[1] * filter_state[1]
-                        + b[2] * filter_state[2]
-                        + b[3] * filter_state[3]
-                        + b[4] * filter_state[4];
+                    src.foreach_sample_zipped(c, dest[dest_index..].iter_mut(), |src, dest| {
+                        filter_state[0] = (*src).to_sample::<f64>()
+                            - a[1] * filter_state[1]
+                            - a[2] * filter_state[2]
+                            - a[3] * filter_state[3]
+                            - a[4] * filter_state[4];
+                        *dest = b[0] * filter_state[0]
+                            + b[1] * filter_state[1]
+                            + b[2] * filter_state[2]
+                            + b[3] * filter_state[3]
+                            + b[4] * filter_state[4];
 
-                    filter_state[4] = filter_state[3];
-                    filter_state[3] = filter_state[2];
-                    filter_state[2] = filter_state[1];
-                    filter_state[1] = filter_state[0];
-                });
+                        filter_state[4] = filter_state[3];
+                        filter_state[3] = filter_state[2];
+                        filter_state[2] = filter_state[1];
+                        filter_state[1] = filter_state[0];
+                    });
 
-                if ftz.is_none() {
-                    for v in filter_state {
-                        if v.abs() < f64::EPSILON {
-                            *v = 0.0;
+                    if ftz.is_none() {
+                        for v in filter_state {
+                            if v.abs() < f64::EPSILON {
+                                *v = 0.0;
+                            }
                         }
                     }
                 }
@@ -261,37 +269,39 @@ impl Filter {
         assert!(self.filter_state.len() == self.channels as usize);
 
         ftz::with_ftz(|ftz| {
-            for (c, channel_map) in channel_map.iter().enumerate() {
-                if *channel_map == crate::ebur128::Channel::Unused {
-                    continue;
-                }
+            if self.calculate_loudness {
+                for (c, channel_map) in channel_map.iter().enumerate() {
+                    if *channel_map == crate::ebur128::Channel::Unused {
+                        continue;
+                    }
 
-                assert!(c < src.channels());
+                    assert!(c < src.channels());
 
-                let Filter {
-                    ref mut filter_state,
-                    ref a,
-                    ..
-                } = *self;
-                let filter_state = &mut filter_state[c];
+                    let Filter {
+                        ref mut filter_state,
+                        ref a,
+                        ..
+                    } = *self;
+                    let filter_state = &mut filter_state[c];
 
-                src.foreach_sample(c, |src| {
-                    filter_state[0] = (*src).to_sample::<f64>()
-                        - a[1] * filter_state[1]
-                        - a[2] * filter_state[2]
-                        - a[3] * filter_state[3]
-                        - a[4] * filter_state[4];
+                    src.foreach_sample(c, |src| {
+                        filter_state[0] = (*src).to_sample::<f64>()
+                            - a[1] * filter_state[1]
+                            - a[2] * filter_state[2]
+                            - a[3] * filter_state[3]
+                            - a[4] * filter_state[4];
 
-                    filter_state[4] = filter_state[3];
-                    filter_state[3] = filter_state[2];
-                    filter_state[2] = filter_state[1];
-                    filter_state[1] = filter_state[0];
-                });
+                        filter_state[4] = filter_state[3];
+                        filter_state[3] = filter_state[2];
+                        filter_state[2] = filter_state[1];
+                        filter_state[1] = filter_state[0];
+                    });
 
-                if ftz.is_none() {
-                    for v in filter_state {
-                        if v.abs() < f64::EPSILON {
-                            *v = 0.0;
+                    if ftz.is_none() {
+                        for v in filter_state {
+                            if v.abs() < f64::EPSILON {
+                                *v = 0.0;
+                            }
                         }
                     }
                 }
@@ -559,6 +569,7 @@ mod tests {
                 signal.channels,
                 calculate_sample_peak,
                 calculate_true_peak,
+                true,
             );
 
             let mut data_out_tmp = vec![0.0f64; frames * signal.channels as usize];
@@ -647,6 +658,7 @@ mod tests {
                 signal.channels,
                 calculate_sample_peak,
                 calculate_true_peak,
+                true,
             );
 
             let mut data_out_tmp = vec![0.0f64; frames * signal.channels as usize];
@@ -735,6 +747,7 @@ mod tests {
                 signal.channels,
                 calculate_sample_peak,
                 calculate_true_peak,
+                true,
             );
 
             let mut data_out_tmp = vec![0.0f64; frames * signal.channels as usize];
@@ -823,6 +836,7 @@ mod tests {
                 signal.channels,
                 calculate_sample_peak,
                 calculate_true_peak,
+                true,
             );
 
             let mut data_out_tmp = vec![0.0f64; frames * signal.channels as usize];

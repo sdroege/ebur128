@@ -17,7 +17,9 @@ fn get_results_c(ebu: &EbuR128C, mode: ModeC) {
     if mode.contains(ModeC::S) {
         black_box(ebu.loudness_shortterm().unwrap());
     }
-    black_box(ebu.loudness_window(1).unwrap());
+    if mode.intersects(ModeC::M | ModeC::S | ModeC::I | ModeC::LRA) {
+        black_box(ebu.loudness_window(1).unwrap());
+    }
 
     if mode.contains(ModeC::LRA) {
         black_box(ebu.loudness_range().unwrap());
@@ -52,7 +54,9 @@ fn get_results(ebu: &EbuR128, mode: Mode) {
     if mode.contains(Mode::S) {
         black_box(ebu.loudness_shortterm().unwrap());
     }
-    black_box(ebu.loudness_window(1).unwrap());
+    if mode.intersects(Mode::M | Mode::S | Mode::I | Mode::LRA) {
+        black_box(ebu.loudness_window(1).unwrap());
+    }
 
     if mode.contains(Mode::LRA) {
         black_box(ebu.loudness_range().unwrap());

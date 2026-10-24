@@ -599,6 +599,10 @@ impl EbuR128 {
 
         self.filter.reset_peaks();
 
+        // Peak-only modes store no filtered audio. The buffer is empty and the write index
+        // must not advance because it could then never wrap around.
+        let store_audio_data = self.mode.contains(Mode::M);
+
         while src.frames() > 0 {
             let num_frames = src.frames();
 
@@ -613,7 +617,9 @@ impl EbuR128 {
                 );
 
                 src = next;
-                self.audio_data_index += self.needed_frames;
+                if store_audio_data {
+                    self.audio_data_index += self.needed_frames;
+                }
 
                 if self.mode.contains(Mode::I) {
                     let energy = crate::filter::Filter::calc_gating_block(
@@ -634,7 +640,9 @@ impl EbuR128 {
                     }
                 }
 
-                if self.audio_data_index == self.audio_data.len() / self.channels as usize {
+                if store_audio_data
+                    && self.audio_data_index == self.audio_data.len() / self.channels as usize
+                {
                     self.audio_data_index = 0;
                 }
 
@@ -650,7 +658,9 @@ impl EbuR128 {
                     &self.channel_map,
                 );
 
-                self.audio_data_index += num_frames;
+                if store_audio_data {
+                    self.audio_data_index += num_frames;
+                }
                 if self.mode.contains(Mode::LRA) {
                     self.short_term_frame_counter += num_frames;
                 }

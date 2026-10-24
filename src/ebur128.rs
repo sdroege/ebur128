@@ -500,13 +500,18 @@ impl EbuR128 {
     /// Set the maximum duration in ms that will be used for
     /// [`EbuR128::loudness_window`](struct.EbuR128.html#method.loudness_window). Note that this
     /// destroys the current content of the audio buffer.
+    ///
+    /// This requires one of the loudness modes (`Mode::M` or any mode including it) and returns
+    /// [`Error::InvalidMode`] otherwise.
     pub fn set_max_window(&mut self, window: u32) -> Result<(), Error> {
+        if !self.mode.contains(Mode::M) {
+            return Err(Error::InvalidMode);
+        }
+
         let window = if self.mode.contains(Mode::S) {
             std::cmp::max(window, 3000)
-        } else if self.mode.contains(Mode::M) {
-            std::cmp::max(window, 400)
         } else {
-            window
+            std::cmp::max(window, 400)
         };
 
         if window as usize == self.window {
@@ -813,6 +818,12 @@ impl EbuR128 {
     }
 
     fn energy_in_interval(&self, interval_frames: usize) -> Result<f64, Error> {
+        // Without a loudness mode no filtered audio is stored and every
+        // windowed loudness result is unavailable, including window 0.
+        if !self.mode.contains(Mode::M) {
+            return Err(Error::InvalidMode);
+        }
+
         if interval_frames > self.audio_data.len() / self.channels as usize {
             return Err(Error::InvalidMode);
         }

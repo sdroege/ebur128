@@ -530,10 +530,8 @@ mod tests {
     struct Energy(f64);
 
     impl quickcheck::Arbitrary for Energy {
-        fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
-            use rand::Rng;
-
-            Energy(g.gen_range(-5.0, 1200.0))
+        fn arbitrary(g: &mut quickcheck::Gen) -> Self {
+            Energy(crate::utils::tests::gen_float_range(g, -5.0, 1200.0))
         }
     }
 

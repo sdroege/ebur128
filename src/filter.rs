@@ -205,6 +205,11 @@ impl Filter {
                 assert!(dest.len() % self.channels as usize == 0);
                 let dest_stride = dest.len() / self.channels as usize;
                 assert!(dest_index + src.frames() <= dest_stride);
+                // An empty destination means there are no frames to filter, but
+                // chunks_exact_mut() below panics on a chunk size of 0.
+                if dest_stride == 0 {
+                    return;
+                }
 
                 for (c, (channel_map, dest)) in
                     Iterator::zip(channel_map.iter(), dest.chunks_exact_mut(dest_stride))
@@ -493,7 +498,7 @@ extern "C" {
 
 #[cfg(feature = "c-tests")]
 #[cfg(test)]
-mod tests {
+mod c_tests {
     use super::*;
     use crate::tests::Signal;
     use crate::utils::tests::{gen_float_range, gen_int_range};

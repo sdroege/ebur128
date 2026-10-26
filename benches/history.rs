@@ -1,4 +1,8 @@
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
+// std::hint::black_box is newer than the library MSRV, but benches are never built with the MSRV toolchain
+#![allow(clippy::incompatible_msrv)]
+
+use criterion::{criterion_group, criterion_main, Criterion};
+use std::hint::black_box;
 
 use ebur128::history;
 

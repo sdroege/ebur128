@@ -496,6 +496,7 @@ extern "C" {
 mod tests {
     use super::*;
     use crate::tests::Signal;
+    use crate::utils::tests::{gen_float_range, gen_int_range};
     use float_eq::assert_float_eq;
     use quickcheck_macros::quickcheck;
 
@@ -911,15 +912,13 @@ mod tests {
     }
 
     impl quickcheck::Arbitrary for GatingBlock {
-        fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
-            use rand::Rng;
-
-            let channels = g.gen_range(1, 16);
+        fn arbitrary(g: &mut quickcheck::Gen) -> Self {
+            let channels = gen_int_range(g, 1, 16) as u32;
 
             let rate = 48_000;
 
             let samples_in_100ms = (rate + 5) / 10;
-            let (frames_per_block, window) = if g.gen() {
+            let (frames_per_block, window) = if bool::arbitrary(g) {
                 (4 * samples_in_100ms, 400)
             } else {
                 (30 * samples_in_100ms, 3000)
@@ -934,10 +933,11 @@ mod tests {
 
             let mut audio_data = vec![0.0; audio_data_frames * channels as usize];
             for v in &mut audio_data {
-                *v = g.gen_range(-1.0, 1.0);
+                *v = gen_float_range(g, -1.0, 1.0);
             }
 
-            let audio_data_index = g.gen_range(0, audio_data_frames) * channels as usize;
+            let audio_data_index =
+                (gen_int_range(g, 0, audio_data_frames as u64) as usize) * channels as usize;
 
             GatingBlock {
                 frames_per_block,

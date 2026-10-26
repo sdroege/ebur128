@@ -359,6 +359,17 @@ impl SampleAccumulator for f32 {
 #[cfg(test)]
 pub mod tests {
     use dasp_sample::{FromSample, Sample};
+    use quickcheck::Arbitrary;
+
+    // quickcheck 1.x does not expose random generation through `Gen` anymore, so scale arbitrary
+    // values into the wanted ranges instead. The slight modulo bias does not matter here.
+    pub fn gen_int_range(g: &mut quickcheck::Gen, lo: u64, hi: u64) -> u64 {
+        lo + u64::arbitrary(g) % (hi - lo)
+    }
+
+    pub fn gen_float_range(g: &mut quickcheck::Gen, lo: f64, hi: f64) -> f64 {
+        lo + (hi - lo) * (u32::arbitrary(g) as f64 / u32::MAX as f64)
+    }
 
     #[derive(Clone, Debug)]
     pub struct Signal<S: FromSample<f32>> {
@@ -368,25 +379,25 @@ pub mod tests {
     }
 
     impl<S: Sample + FromSample<f32> + quickcheck::Arbitrary> quickcheck::Arbitrary for Signal<S> {
-        fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
-            use rand::Rng;
+        fn arbitrary(g: &mut quickcheck::Gen) -> Self {
+            let channels = gen_int_range(g, 1, 16) as u32;
+            let rate = gen_int_range(g, 16_000, 224_000) as u32;
+            // Generate at least 100ms of data, shorter signals would only create
+            // zero-sized processing chunks.
+            let num_frames = (rate as f64 * gen_float_range(g, 0.1, 5.0)) as usize;
 
-            let channels = g.gen_range(1, 16);
-            let rate = g.gen_range(16_000, 224_000);
-            let num_frames = (rate as f64 * g.gen_range(0.0, 5.0)) as usize;
-
-            let max = g.gen_range(0.0, 1.0);
+            let max = gen_float_range(g, 0.0, 1.0) as f32;
             let freqs = [
-                g.gen_range(20.0, 16_000.0),
-                g.gen_range(20.0, 16_000.0),
-                g.gen_range(20.0, 16_000.0),
-                g.gen_range(20.0, 16_000.0),
+                gen_float_range(g, 20.0, 16_000.0) as f32,
+                gen_float_range(g, 20.0, 16_000.0) as f32,
+                gen_float_range(g, 20.0, 16_000.0) as f32,
+                gen_float_range(g, 20.0, 16_000.0) as f32,
             ];
             let volumes = [
-                g.gen_range(0.0, 1.0),
-                g.gen_range(0.0, 1.0),
-                g.gen_range(0.0, 1.0),
-                g.gen_range(0.0, 1.0),
+                gen_float_range(g, 0.0, 1.0) as f32,
+                gen_float_range(g, 0.0, 1.0) as f32,
+                gen_float_range(g, 0.0, 1.0) as f32,
+                gen_float_range(g, 0.0, 1.0) as f32,
             ];
             let volume_scale = 1.0 / volumes.iter().sum::<f32>();
             let mut accumulators = [0.0; 4];

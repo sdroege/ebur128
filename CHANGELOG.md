@@ -7,6 +7,26 @@ specifically the [variant used by Rust](http://doc.crates.io/manifest.html#the-v
 
 ## [Unreleased] - TBD
 
+## [0.1.11] - 2026-10-26
+### Fixed
+- Flush the filter state when it falls below `f64::MIN_POSITIVE` instead of
+  `f64::EPSILON` on targets without SSE2 flush-to-zero. Small but significant
+  values were zeroed out there, making results depend on how the input was
+  split into `add_frames()` calls and differ in the last bits from x86.
+- Keep the internal write index into the audio buffer bounded in peak-only
+  modes. It was never reset and grew with the number of processed frames,
+  which could eventually overflow it on 32-bit platforms.
+- Return an error instead of `-inf` when requesting windowed loudness values
+  in peak-only modes: `loudness_window()` with a window of 0 and
+  `set_max_window()` did not check that a loudness mode was enabled.
+- Fix copy-paste typo in the documentation of `Planar`.
+
+### Changed
+- Peak-only modes (`Mode::SAMPLE_PEAK`, `Mode::TRUE_PEAK`) no longer include
+  the bit of `Mode::M` and the BS.1770 biquad filter is completely skipped
+  when no loudness mode is requested. This also avoids allocating the buffer
+  for the filtered audio in these modes.
+
 ## [0.1.10] - 2024-10-26
 ### Added
 - Make `energy_to_loudness()` and `EbuR128::gating_block_count_and_energy()`
@@ -116,7 +136,8 @@ specifically the [variant used by Rust](http://doc.crates.io/manifest.html#the-v
 ## 0.1.0 - 2020-01-06
 - Initial release of ebur128.
 
-[Unreleased]: https://github.com/sdroege/ebur128/compare/0.1.10...HEAD
+[Unreleased]: https://github.com/sdroege/ebur128/compare/0.1.11...HEAD
+[0.1.11]: https://github.com/sdroege/ebur128/compare/0.1.10...0.1.11
 [0.1.10]: https://github.com/sdroege/ebur128/compare/0.1.9...0.1.10
 [0.1.9]: https://github.com/sdroege/ebur128/compare/0.1.8...0.1.9
 [0.1.8]: https://github.com/sdroege/ebur128/compare/0.1.7...0.1.8

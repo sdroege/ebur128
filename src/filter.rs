@@ -244,7 +244,7 @@ impl Filter {
 
                     if ftz.is_none() {
                         for v in filter_state {
-                            if v.abs() < f64::EPSILON {
+                            if v.abs() < f64::MIN_POSITIVE {
                                 *v = 0.0;
                             }
                         }
@@ -299,7 +299,7 @@ impl Filter {
 
                     if ftz.is_none() {
                         for v in filter_state {
-                            if v.abs() < f64::EPSILON {
+                            if v.abs() < f64::MIN_POSITIVE {
                                 *v = 0.0;
                             }
                         }

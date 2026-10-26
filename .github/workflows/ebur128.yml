@@ -95,11 +95,14 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
+    # tech.ebu.ch rejects non-browser downloads from cloud IPs with 403, so
+    # use this GitHub mirror.
     - name: Download samples
       env:
-        LINK: https://tech.ebu.ch/files/live/sites/tech/files/shared
+        LINK: https://github.com/maxwalley/EBULoudnessTestSetV5/releases/download/EBU_Loudness_Test_Set_v5
       run: |
-        wget $LINK/testmaterial/ebu-loudness-test-setv05.zip
+        wget $LINK/ebu-loudness-test-setv05.zip
+        echo "9cc500b4df83f7c21855c74dce795ef5209a752bf884253ae57d0ce512efb062  ebu-loudness-test-setv05.zip" | sha256sum -c
         unzip -u ebu-loudness-test-setv05.zip -d tests/reference_files
 
     - name: Install ${{ matrix.toolchain }}

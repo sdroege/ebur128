@@ -11,6 +11,20 @@ pub struct State {
     internal: *mut ebur128::EbuR128,
 }
 
+/// `EBUR128_MODE_TRUE_PEAK_ACCURATE`'s own bit. It sits near the top of the C mode flags rather
+/// than at `Mode::TRUE_PEAK_ACCURATE`'s `1 << 7`, which libebur128 would most likely use next.
+const C_MODE_TRUE_PEAK_ACCURATE: i32 = 1 << 30;
+
+/// The C mode flags share their low bits with [`ebur128::Mode`], except the accurate true-peak
+/// flag. Bit 7 is masked off so a future libebur128 flag there can't select it by accident.
+fn mode_from_c(mode: i32) -> ebur128::Mode {
+    let mut m = ebur128::Mode::from_bits_truncate((mode & 0x7f) as u8);
+    if mode & C_MODE_TRUE_PEAK_ACCURATE != 0 {
+        m |= ebur128::Mode::TRUE_PEAK_ACCURATE;
+    }
+    m
+}
+
 #[no_mangle]
 pub unsafe extern "C" fn ebur128_get_version(major: *mut i32, minor: *mut i32, patch: *mut i32) {
     // We're based on 1.2.6 so let's return that for now
@@ -23,14 +37,10 @@ pub unsafe extern "C" fn ebur128_get_version(major: *mut i32, minor: *mut i32, p
 pub unsafe extern "C" fn ebur128_init(
     channels: u32,
     samplerate: std::os::raw::c_ulong,
-    // Same values as our Mode enum
+    // Same values as our Mode enum, except EBUR128_MODE_TRUE_PEAK_ACCURATE
     mode: i32,
 ) -> *mut State {
-    let e = match ebur128::EbuR128::new(
-        channels,
-        samplerate as u32,
-        ebur128::Mode::from_bits_truncate(mode as u8),
-    ) {
+    let e = match ebur128::EbuR128::new(channels, samplerate as u32, mode_from_c(mode)) {
         Err(_) => return ptr::null_mut(),
         Ok(e) => e,
     };

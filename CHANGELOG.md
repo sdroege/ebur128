@@ -6,6 +6,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 specifically the [variant used by Rust](http://doc.crates.io/manifest.html#the-version-field).
 
 ## [Unreleased] - TBD
+### Added
+- `Mode::TRUE_PEAK_ACCURATE`, an opt-in true-peak mode whose interpolation
+  filter is flat to 20 kHz at 44.1 kHz. The default `Mode::TRUE_PEAK` uses the
+  BS.1770 example filter, which can read content near the top of the band
+  several dB low (worst case about 4 dB at 44.1 kHz for content within 20 kHz).
+  It oversamples 8x below 96 kHz, 4x below 192 kHz and 2x below 384 kHz, and
+  costs roughly three times as much CPU as the default mode. Exposed in the
+  C API as `EBUR128_MODE_TRUE_PEAK_ACCURATE` (`1 << 30`).
 
 ## [0.1.11] - 2026-10-26
 ### Fixed

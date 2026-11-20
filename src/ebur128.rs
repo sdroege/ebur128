@@ -72,6 +72,10 @@ bitflags! {
         const TRUE_PEAK = 0b00110000;
         /// uses histogram algorithm to calculate loudness
         const HISTOGRAM = 0b01000000;
+        /// like [`Mode::TRUE_PEAK`], but with an interpolation filter that is flat to 20 kHz at
+        /// 44.1 kHz instead of the BS.1770 example filter, which reads content near the top of the
+        /// band several dB low. Costs more CPU.
+        const TRUE_PEAK_ACCURATE = 0b10000000 | Self::TRUE_PEAK.bits();
     }
 }
 
@@ -327,13 +331,16 @@ impl EbuR128 {
             crate::history::History::new(mode.contains(Mode::HISTOGRAM), history / 3000);
         let short_term_frame_counter = 0;
 
-        let filter = crate::filter::Filter::new(
+        let mut filter = crate::filter::Filter::new(
             rate,
             channels,
             mode.contains(Mode::SAMPLE_PEAK),
             mode.contains(Mode::TRUE_PEAK),
             calculate_loudness,
         );
+        if mode.contains(Mode::TRUE_PEAK_ACCURATE) {
+            filter.use_accurate_true_peak(rate);
+        }
 
         let channel_map = default_channel_map(channels);
 
@@ -485,6 +492,9 @@ impl EbuR128 {
             self.mode.contains(Mode::TRUE_PEAK),
             calculate_loudness,
         );
+        if self.mode.contains(Mode::TRUE_PEAK_ACCURATE) {
+            self.filter.use_accurate_true_peak(rate);
+        }
 
         // the first block needs 400ms of audio data
         self.needed_frames = self.samples_in_100ms * 4;
@@ -1038,6 +1048,12 @@ mod tests {
     #[cfg(feature = "c-tests")]
     use quickcheck_macros::quickcheck;
 
+    /// Every mode except [`Mode::TRUE_PEAK_ACCURATE`], whose scanner reads differently from the
+    /// default one these tests' expected values (and libebur128) come from.
+    fn all_standard() -> Mode {
+        Mode::from_bits_truncate(Mode::all().bits() & !0b10000000)
+    }
+
     fn f64_max(mut values: impl Iterator<Item = f64>) -> Option<f64> {
         let mut v = values.next()?;
         for candidate in values {
@@ -1060,7 +1076,7 @@ mod tests {
             accumulator += step;
         }
 
-        let mut ebu = EbuR128::new(2, 48_000, Mode::all()).unwrap();
+        let mut ebu = EbuR128::new(2, 48_000, all_standard()).unwrap();
         ebu.add_frames_i16(&data).unwrap();
 
         assert_float_eq!(
@@ -1182,7 +1198,7 @@ mod tests {
             accumulator += step;
         }
 
-        let mut ebu = EbuR128::new(2, 48_000, Mode::all()).unwrap();
+        let mut ebu = EbuR128::new(2, 48_000, all_standard()).unwrap();
         ebu.add_frames_i32(&data).unwrap();
 
         assert_float_eq!(
@@ -1252,7 +1268,7 @@ mod tests {
             accumulator += step;
         }
 
-        let mut ebu = EbuR128::new(2, 48_000, Mode::all()).unwrap();
+        let mut ebu = EbuR128::new(2, 48_000, all_standard()).unwrap();
         ebu.add_frames_f32(&data).unwrap();
 
         assert_float_eq!(
@@ -1322,7 +1338,7 @@ mod tests {
             accumulator += step;
         }
 
-        let mut ebu = EbuR128::new(2, 48_000, Mode::all()).unwrap();
+        let mut ebu = EbuR128::new(2, 48_000, all_standard()).unwrap();
         ebu.add_frames_f64(&data).unwrap();
 
         assert_float_eq!(
@@ -1392,7 +1408,7 @@ mod tests {
             accumulator += step;
         }
 
-        let mut ebu = EbuR128::new(2, 48_000, Mode::all() & !Mode::HISTOGRAM).unwrap();
+        let mut ebu = EbuR128::new(2, 48_000, all_standard() & !Mode::HISTOGRAM).unwrap();
         ebu.add_frames_i16(&data).unwrap();
 
         assert_float_eq!(
@@ -1482,7 +1498,7 @@ mod tests {
             accumulator += step;
         }
 
-        let mut ebu = EbuR128::new(2, 48_000, Mode::all() & !Mode::HISTOGRAM).unwrap();
+        let mut ebu = EbuR128::new(2, 48_000, all_standard() & !Mode::HISTOGRAM).unwrap();
         ebu.add_frames_i32(&data).unwrap();
 
         assert_float_eq!(
@@ -1556,7 +1572,7 @@ mod tests {
             accumulator += step;
         }
 
-        let mut ebu = EbuR128::new(2, 48_000, Mode::all() & !Mode::HISTOGRAM).unwrap();
+        let mut ebu = EbuR128::new(2, 48_000, all_standard() & !Mode::HISTOGRAM).unwrap();
         ebu.add_frames_f32(&data).unwrap();
 
         assert_float_eq!(
@@ -1630,7 +1646,7 @@ mod tests {
             accumulator += step;
         }
 
-        let mut ebu = EbuR128::new(2, 48_000, Mode::all() & !Mode::HISTOGRAM).unwrap();
+        let mut ebu = EbuR128::new(2, 48_000, all_standard() & !Mode::HISTOGRAM).unwrap();
         ebu.add_frames_f64(&data).unwrap();
 
         assert_float_eq!(
@@ -1705,7 +1721,7 @@ mod tests {
             accumulator += step;
         }
 
-        let mut ebu = EbuR128::new(2, 48_000, Mode::all() & !Mode::HISTOGRAM).unwrap();
+        let mut ebu = EbuR128::new(2, 48_000, all_standard() & !Mode::HISTOGRAM).unwrap();
         ebu.add_frames_planar_i16(&[fst, snd]).unwrap();
 
         assert_float_eq!(
@@ -1796,7 +1812,7 @@ mod tests {
             accumulator += step;
         }
 
-        let mut ebu = EbuR128::new(2, 48_000, Mode::all() & !Mode::HISTOGRAM).unwrap();
+        let mut ebu = EbuR128::new(2, 48_000, all_standard() & !Mode::HISTOGRAM).unwrap();
         ebu.add_frames_planar_i32(&[fst, snd]).unwrap();
 
         assert_float_eq!(
@@ -1871,7 +1887,7 @@ mod tests {
             accumulator += step;
         }
 
-        let mut ebu = EbuR128::new(2, 48_000, Mode::all() & !Mode::HISTOGRAM).unwrap();
+        let mut ebu = EbuR128::new(2, 48_000, all_standard() & !Mode::HISTOGRAM).unwrap();
         ebu.add_frames_planar_f32(&[fst, snd]).unwrap();
 
         assert_float_eq!(
@@ -1946,7 +1962,7 @@ mod tests {
             accumulator += step;
         }
 
-        let mut ebu = EbuR128::new(2, 48_000, Mode::all() & !Mode::HISTOGRAM).unwrap();
+        let mut ebu = EbuR128::new(2, 48_000, all_standard() & !Mode::HISTOGRAM).unwrap();
         ebu.add_frames_planar_f64(&[fst, snd]).unwrap();
 
         assert_float_eq!(
@@ -2020,7 +2036,7 @@ mod tests {
             accumulator += step;
         }
 
-        let mut ebu1 = EbuR128::new(2, 48_000, Mode::all()).unwrap();
+        let mut ebu1 = EbuR128::new(2, 48_000, all_standard()).unwrap();
         ebu1.add_frames_f32(&data).unwrap();
 
         let mut data = vec![0.0f32; 48_000 * 5 * 2];
@@ -2033,7 +2049,7 @@ mod tests {
             accumulator += step;
         }
 
-        let mut ebu2 = EbuR128::new(2, 48_000, Mode::all()).unwrap();
+        let mut ebu2 = EbuR128::new(2, 48_000, all_standard()).unwrap();
         ebu2.add_frames_f32(&data).unwrap();
 
         assert_float_eq!(
@@ -2061,7 +2077,7 @@ mod tests {
             accumulator += step;
         }
 
-        let mut ebu1 = EbuR128::new(2, 48_000, Mode::all() & !Mode::HISTOGRAM).unwrap();
+        let mut ebu1 = EbuR128::new(2, 48_000, all_standard() & !Mode::HISTOGRAM).unwrap();
         ebu1.add_frames_f32(&data).unwrap();
 
         let mut data = vec![0.0f32; 48_000 * 5 * 2];
@@ -2074,7 +2090,7 @@ mod tests {
             accumulator += step;
         }
 
-        let mut ebu2 = EbuR128::new(2, 48_000, Mode::all() & !Mode::HISTOGRAM).unwrap();
+        let mut ebu2 = EbuR128::new(2, 48_000, all_standard() & !Mode::HISTOGRAM).unwrap();
         ebu2.add_frames_f32(&data).unwrap();
 
         assert_float_eq!(
@@ -2101,12 +2117,12 @@ mod tests {
             accumulator += step;
         }
 
-        let mut ebu1 = EbuR128::new(1, 48_000, Mode::all() & !Mode::HISTOGRAM).unwrap();
+        let mut ebu1 = EbuR128::new(1, 48_000, all_standard() & !Mode::HISTOGRAM).unwrap();
         ebu1.add_frames_f32(&data).unwrap();
 
         let mut ebu_chunks = Vec::new();
         for i in 0..3usize {
-            let mut ebu_chunk = EbuR128::new(1, 48_000, Mode::all() & !Mode::HISTOGRAM).unwrap();
+            let mut ebu_chunk = EbuR128::new(1, 48_000, all_standard() & !Mode::HISTOGRAM).unwrap();
             let start_index = std::cmp::max(i as isize * 48_000, 0) as usize;
             let stop_index = std::cmp::min(start_index + 48_000 + (48_00 * 3), data.len());
             if start_index > 0 {
@@ -2150,13 +2166,17 @@ mod tests {
             accumulator += step;
         }
 
-        let mut ebu1 = EbuR128::new(1, 48_000, Mode::all() | Mode::HISTOGRAM).unwrap();
+        let mut ebu1 = EbuR128::new(1, 48_000, all_standard() | Mode::HISTOGRAM).unwrap();
         ebu1.add_frames_f32(&data).unwrap();
 
         let mut ebu_chunks = Vec::new();
         for i in 0..3usize {
-            let mut ebu_chunk =
-                EbuR128::new(1, 48_000, Mode::all() | Mode::HISTOGRAM & !Mode::HISTOGRAM).unwrap();
+            let mut ebu_chunk = EbuR128::new(
+                1,
+                48_000,
+                all_standard() | Mode::HISTOGRAM & !Mode::HISTOGRAM,
+            )
+            .unwrap();
             let start_index = std::cmp::max(i as isize * 48_000, 0) as usize;
             let stop_index = std::cmp::min(start_index + 48_000 + (48_00 * 3), data.len());
             if start_index > 0 {
@@ -2253,7 +2273,7 @@ mod tests {
     #[cfg(feature = "c-tests")]
     #[quickcheck]
     fn compare_c_impl_i16(signal: Signal<i16>) {
-        let mut ebu = EbuR128::new(signal.channels, signal.rate, Mode::all()).unwrap();
+        let mut ebu = EbuR128::new(signal.channels, signal.rate, all_standard()).unwrap();
         ebu.add_frames_i16(&signal.data).unwrap();
 
         let mut ebu_c =
@@ -2266,7 +2286,7 @@ mod tests {
     #[cfg(feature = "c-tests")]
     #[quickcheck]
     fn compare_c_impl_i32(signal: Signal<i32>) {
-        let mut ebu = EbuR128::new(signal.channels, signal.rate, Mode::all()).unwrap();
+        let mut ebu = EbuR128::new(signal.channels, signal.rate, all_standard()).unwrap();
         ebu.add_frames_i32(&signal.data).unwrap();
 
         let mut ebu_c =
@@ -2279,7 +2299,7 @@ mod tests {
     #[cfg(feature = "c-tests")]
     #[quickcheck]
     fn compare_c_impl_f32(signal: Signal<f32>) {
-        let mut ebu = EbuR128::new(signal.channels, signal.rate, Mode::all()).unwrap();
+        let mut ebu = EbuR128::new(signal.channels, signal.rate, all_standard()).unwrap();
         ebu.add_frames_f32(&signal.data).unwrap();
 
         let mut ebu_c =
@@ -2292,7 +2312,7 @@ mod tests {
     #[cfg(feature = "c-tests")]
     #[quickcheck]
     fn compare_c_impl_f64(signal: Signal<f64>) {
-        let mut ebu = EbuR128::new(signal.channels, signal.rate, Mode::all()).unwrap();
+        let mut ebu = EbuR128::new(signal.channels, signal.rate, all_standard()).unwrap();
         ebu.add_frames_f64(&signal.data).unwrap();
 
         let mut ebu_c =
@@ -2305,8 +2325,12 @@ mod tests {
     #[cfg(feature = "c-tests")]
     #[quickcheck]
     fn compare_c_impl_i16_no_histogram(signal: Signal<i16>) {
-        let mut ebu =
-            EbuR128::new(signal.channels, signal.rate, Mode::all() & !Mode::HISTOGRAM).unwrap();
+        let mut ebu = EbuR128::new(
+            signal.channels,
+            signal.rate,
+            all_standard() & !Mode::HISTOGRAM,
+        )
+        .unwrap();
         ebu.add_frames_i16(&signal.data).unwrap();
 
         let mut ebu_c = ebur128_c::EbuR128::new(
@@ -2323,8 +2347,12 @@ mod tests {
     #[cfg(feature = "c-tests")]
     #[quickcheck]
     fn compare_c_impl_i32_no_histogram(signal: Signal<i32>) {
-        let mut ebu =
-            EbuR128::new(signal.channels, signal.rate, Mode::all() & !Mode::HISTOGRAM).unwrap();
+        let mut ebu = EbuR128::new(
+            signal.channels,
+            signal.rate,
+            all_standard() & !Mode::HISTOGRAM,
+        )
+        .unwrap();
         ebu.add_frames_i32(&signal.data).unwrap();
 
         let mut ebu_c = ebur128_c::EbuR128::new(
@@ -2341,8 +2369,12 @@ mod tests {
     #[cfg(feature = "c-tests")]
     #[quickcheck]
     fn compare_c_impl_f32_no_histogram(signal: Signal<f32>) {
-        let mut ebu =
-            EbuR128::new(signal.channels, signal.rate, Mode::all() & !Mode::HISTOGRAM).unwrap();
+        let mut ebu = EbuR128::new(
+            signal.channels,
+            signal.rate,
+            all_standard() & !Mode::HISTOGRAM,
+        )
+        .unwrap();
         ebu.add_frames_f32(&signal.data).unwrap();
 
         let mut ebu_c = ebur128_c::EbuR128::new(
@@ -2359,8 +2391,12 @@ mod tests {
     #[cfg(feature = "c-tests")]
     #[quickcheck]
     fn compare_c_impl_f64_no_histogram(signal: Signal<f64>) {
-        let mut ebu =
-            EbuR128::new(signal.channels, signal.rate, Mode::all() & !Mode::HISTOGRAM).unwrap();
+        let mut ebu = EbuR128::new(
+            signal.channels,
+            signal.rate,
+            all_standard() & !Mode::HISTOGRAM,
+        )
+        .unwrap();
         ebu.add_frames_f64(&signal.data).unwrap();
 
         let mut ebu_c = ebur128_c::EbuR128::new(
@@ -2382,7 +2418,7 @@ mod tests {
             out[1] = f32::NEG_INFINITY;
         }
 
-        let mut ebu = EbuR128::new(2, 44_100, Mode::all() - Mode::HISTOGRAM).unwrap();
+        let mut ebu = EbuR128::new(2, 44_100, all_standard() - Mode::HISTOGRAM).unwrap();
         assert!(ebu.add_frames_f32(&data).is_ok());
         assert_eq!(ebu.sample_peak(0).unwrap().abs(), f64::INFINITY);
         assert_eq!(ebu.true_peak(0).unwrap().abs(), f64::INFINITY);
@@ -2394,7 +2430,7 @@ mod tests {
         assert!(ebu.relative_threshold().unwrap().is_nan());
 
         // With histogram mode the first bin is taken for NaN
-        let mut ebu = EbuR128::new(2, 44_100, Mode::all()).unwrap();
+        let mut ebu = EbuR128::new(2, 44_100, all_standard()).unwrap();
         assert!(ebu.add_frames_f32(&data).is_ok());
         assert_eq!(ebu.sample_peak(0).unwrap().abs(), f64::INFINITY);
         assert_eq!(ebu.true_peak(0).unwrap().abs(), f64::INFINITY);
@@ -2418,7 +2454,7 @@ mod tests {
             out[1] = f32::NAN;
         }
 
-        let mut ebu = EbuR128::new(2, 44_100, Mode::all() - Mode::HISTOGRAM).unwrap();
+        let mut ebu = EbuR128::new(2, 44_100, all_standard() - Mode::HISTOGRAM).unwrap();
         assert!(ebu.add_frames_f32(&data).is_ok());
         assert_float_eq!(ebu.sample_peak(0).unwrap(), 0.0, abs <= f64::EPSILON);
         assert_float_eq!(ebu.true_peak(0).unwrap(), 0.0, abs <= f64::EPSILON);
@@ -2429,7 +2465,7 @@ mod tests {
         assert!(ebu.relative_threshold().unwrap().is_nan());
 
         // With histogram mode the first bin is taken for NaN
-        let mut ebu = EbuR128::new(2, 44_100, Mode::all()).unwrap();
+        let mut ebu = EbuR128::new(2, 44_100, all_standard()).unwrap();
         assert!(ebu.add_frames_f32(&data).is_ok());
         assert_float_eq!(ebu.sample_peak(0).unwrap(), 0.0, abs <= f64::EPSILON);
         assert_float_eq!(ebu.true_peak(0).unwrap(), 0.0, abs <= f64::EPSILON);

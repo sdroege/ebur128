@@ -147,20 +147,58 @@ impl UpsamplingScanner {
     }
 }
 
+// The standard scanner keeps its filter state inline; boxing it would add an indirection to the
+// default path for no gain, since there is only ever one `Scanner` per `TruePeak`.
+#[allow(clippy::large_enum_variant)]
+#[derive(Debug)]
+enum Scanner {
+    Standard(UpsamplingScanner),
+    Accurate8F(crate::true_peak_accurate::Scanner<8>),
+    Accurate4F(crate::true_peak_accurate::Scanner<4>),
+    Accurate2F(crate::true_peak_accurate::Scanner<2>),
+}
+
 /// True peak measurement.
 #[derive(Debug)]
 pub struct TruePeak {
     /// Interpolator/resampler.
-    interp: UpsamplingScanner,
+    interp: Scanner,
 }
 
 impl TruePeak {
     pub fn new(rate: u32, channels: u32) -> Option<Self> {
-        UpsamplingScanner::new(rate, channels).map(|interp| Self { interp })
+        UpsamplingScanner::new(rate, channels).map(|interp| Self {
+            interp: Scanner::Standard(interp),
+        })
+    }
+
+    /// The scanner for [`Mode::TRUE_PEAK_ACCURATE`](crate::Mode::TRUE_PEAK_ACCURATE).
+    ///
+    /// Oversamples 8x below 96 kHz, 4x below 192 kHz and 2x below 384 kHz, keeping the
+    /// oversampled rate at 352.8 kHz or above. Returns `None` from 384 kHz, where the sample peak
+    /// already resolves the audio band.
+    pub fn new_accurate(rate: u32, channels: u32) -> Option<Self> {
+        use crate::true_peak_accurate::Scanner as Accurate;
+
+        let interp = if rate < 96_000 {
+            Scanner::Accurate8F(Accurate::new(channels))
+        } else if rate < 192_000 {
+            Scanner::Accurate4F(Accurate::new(channels))
+        } else if rate < 384_000 {
+            Scanner::Accurate2F(Accurate::new(channels))
+        } else {
+            return None;
+        };
+        Some(Self { interp })
     }
 
     pub fn reset(&mut self) {
-        self.interp.reset();
+        match self.interp {
+            Scanner::Standard(ref mut s) => s.reset(),
+            Scanner::Accurate8F(ref mut s) => s.reset(),
+            Scanner::Accurate4F(ref mut s) => s.reset(),
+            Scanner::Accurate2F(ref mut s) => s.reset(),
+        }
     }
 
     pub fn check_true_peak<'a, T: Sample + 'a, S: crate::Samples<'a, T>>(
@@ -168,12 +206,17 @@ impl TruePeak {
         src: S,
         peaks: &mut [f64],
     ) {
-        self.interp.check_true_peak(src, peaks)
+        match self.interp {
+            Scanner::Standard(ref mut s) => s.check_true_peak(src, peaks),
+            Scanner::Accurate8F(ref mut s) => s.check_true_peak(src, peaks),
+            Scanner::Accurate4F(ref mut s) => s.check_true_peak(src, peaks),
+            Scanner::Accurate2F(ref mut s) => s.check_true_peak(src, peaks),
+        }
     }
 
     pub fn seed<'a, T: Sample + 'a, S: crate::Samples<'a, T>>(&mut self, src: S) {
         let mut true_peaks: SmallVec<[f64; 16]> = smallvec![0.0; src.channels()];
-        self.interp.check_true_peak(src, &mut true_peaks)
+        self.check_true_peak(src, &mut true_peaks)
     }
 }
 

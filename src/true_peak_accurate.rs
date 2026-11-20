@@ -35,10 +35,11 @@
 use std::convert::TryInto;
 use std::f64::consts::PI;
 
-/// Taps per polyphase branch.
-const TAPS: usize = 39;
-/// Independent partial sums in the AVX2 filter loop (see `filter_split`).
+/// Taps per polyphase branch. A multiple of `LANES`, so the fused loop has no scalar remainder.
+const TAPS: usize = 40;
+/// Independent partial sums in the fused filter loop (see `filter_split`).
 const LANES: usize = 4;
+const _: () = assert!(TAPS % LANES == 0);
 /// Passband edge, as a fraction of the sample rate: 20 kHz at 44.1 kHz. The stopband edge mirrors
 /// it about Nyquist, so an image of in-band content always lands in the stopband.
 const PASSBAND_EDGE: f64 = 0.4535;
@@ -77,7 +78,12 @@ pub struct Scanner<const F: usize> {
     channels: Box<[ChannelState]>,
     /// One channel's samples as `f32`, reused between calls.
     scratch: Vec<f32>,
-    /// Whether this CPU has AVX2 and FMA, checked once.
+    /// Whether this CPU has AVX2 and FMA, checked once: picks `scan_avx2` over `scan_generic`.
+    /// Always false off x86.
+    #[cfg_attr(
+        not(any(target_arch = "x86", target_arch = "x86_64")),
+        allow(dead_code)
+    )]
     avx2: bool,
 }
 
@@ -123,24 +129,38 @@ impl<const F: usize> Scanner<F> {
             unsafe { scan_avx2(&self.coeffs, self.gate, state, samples, peak) };
             return;
         }
-        scan_with(
-            &self.coeffs,
-            self.gate,
-            state,
-            samples,
-            peak,
-            filter_portable,
-        );
+        scan_generic(&self.coeffs, self.gate, state, samples, peak);
     }
 
     #[cfg(test)]
-    fn force_portable(&mut self) {
+    fn force_generic(&mut self) {
         self.avx2 = false;
     }
 }
 
-/// The same loop compiled for AVX2+FMA, with the split filter loop that only pays off there:
-/// without AVX it's slightly slower than one running sum per phase.
+/// Whether `mul_add` is a single hardware instruction on every CPU of this target. Elsewhere it
+/// can be a slow library call, so the plain split loop is used instead.
+const FMA_IN_BASELINE: bool = cfg!(any(target_arch = "aarch64", target_feature = "fma"));
+
+/// The fused loop only vectorizes at 8x, where each partial sum spans a whole 8-lane vector; at
+/// 4x and 2x the compiler leaves it scalar and the plain split loop is faster.
+#[inline(always)]
+fn scan_generic<const F: usize>(
+    coeffs: &[[f32; F]; TAPS],
+    gate: f32,
+    state: &mut ChannelState,
+    samples: &[f32],
+    peak: &mut f64,
+) {
+    if F >= 8 && FMA_IN_BASELINE {
+        scan_with(coeffs, gate, state, samples, peak, filter_split_fma);
+    } else {
+        scan_with(coeffs, gate, state, samples, peak, filter_split);
+    }
+}
+
+/// The same loops compiled for AVX2+FMA. One second of 96 kHz stereo in release: 3.0 ms at 8x
+/// with the fused loop and 3.0 ms at 4x with the plain one, against 5.6 ms and 3.3 ms on SSE2.
 #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
 #[target_feature(enable = "avx2,fma")]
 unsafe fn scan_avx2<const F: usize>(
@@ -150,7 +170,11 @@ unsafe fn scan_avx2<const F: usize>(
     samples: &[f32],
     peak: &mut f64,
 ) {
-    scan_with(coeffs, gate, state, samples, peak, filter_split);
+    if F >= 8 {
+        scan_with(coeffs, gate, state, samples, peak, filter_split_fma);
+    } else {
+        scan_with(coeffs, gate, state, samples, peak, filter_split);
+    }
 }
 
 #[inline(always)]
@@ -191,25 +215,28 @@ fn scan_with<const F: usize>(
     *peak = best as f64;
 }
 
-/// All phases' outputs for one input sample, one running sum per phase.
-#[inline(always)]
-fn filter_portable<const F: usize>(coeffs: &[[f32; F]; TAPS], recent: &[f32; TAPS]) -> [f32; F] {
-    let mut acc = [0.0f32; F];
-    for (taps, &x) in coeffs.iter().zip(recent) {
-        for (a, &t) in acc.iter_mut().zip(taps) {
-            *a += t * x;
-        }
-    }
-    acc
-}
-
-/// The same outputs from `LANES` partial sums over interleaved taps. With one running sum, every
-/// tap waits on the previous tap's add; on AVX2 that chain, not the arithmetic, sets the speed.
+/// All phases' outputs for one input sample, from `LANES` partial sums over interleaved taps.
+/// With one running sum every tap waits on the previous tap's add, and that chain, not the
+/// arithmetic, sets the speed.
 #[inline(always)]
 fn filter_split<const F: usize>(coeffs: &[[f32; F]; TAPS], recent: &[f32; TAPS]) -> [f32; F] {
     let mut part = [[0.0f32; F]; LANES];
-    let whole = TAPS / LANES * LANES;
-    for i in (0..whole).step_by(LANES) {
+    for i in (0..TAPS).step_by(LANES) {
+        for (j, p) in part.iter_mut().enumerate() {
+            let x = recent[i + j];
+            for (a, &t) in p.iter_mut().zip(&coeffs[i + j]) {
+                *a += t * x;
+            }
+        }
+    }
+    sum_parts(part)
+}
+
+/// `filter_split` with fused multiply-adds. Only used where FMA is in hardware.
+#[inline(always)]
+fn filter_split_fma<const F: usize>(coeffs: &[[f32; F]; TAPS], recent: &[f32; TAPS]) -> [f32; F] {
+    let mut part = [[0.0f32; F]; LANES];
+    for i in (0..TAPS).step_by(LANES) {
         for (j, p) in part.iter_mut().enumerate() {
             let x = recent[i + j];
             for (a, &t) in p.iter_mut().zip(&coeffs[i + j]) {
@@ -217,11 +244,11 @@ fn filter_split<const F: usize>(coeffs: &[[f32; F]; TAPS], recent: &[f32; TAPS])
             }
         }
     }
-    for i in whole..TAPS {
-        for (a, &t) in part[0].iter_mut().zip(&coeffs[i]) {
-            *a = t.mul_add(recent[i], *a);
-        }
-    }
+    sum_parts(part)
+}
+
+#[inline(always)]
+fn sum_parts<const F: usize>(part: [[f32; F]; LANES]) -> [f32; F] {
     let mut acc = part[0];
     for p in &part[1..] {
         for (a, &v) in acc.iter_mut().zip(p) {
@@ -418,10 +445,10 @@ mod tests {
         }
     }
 
-    /// Both filter paths must agree, so the portable one stays covered on a machine whose tests
-    /// would otherwise only run the AVX2 one.
+    /// The AVX2 path and the generic one must agree, so the generic one stays covered on a machine
+    /// whose tests would otherwise only run the AVX2 one.
     #[test]
-    fn portable_and_avx2_paths_agree() {
+    fn avx2_and_generic_paths_agree() {
         if !has_avx2_fma() {
             return;
         }
@@ -435,7 +462,7 @@ mod tests {
             })
             .collect();
         let (mut fast, mut portable) = (Scanner::<8>::new(2), Scanner::<8>::new(2));
-        portable.force_portable();
+        portable.force_generic();
         for chunk in x.chunks(480) {
             let (mut a, mut b) = ([0.0f64; 2], [0.0f64; 2]);
             fast.check_true_peak(crate::Interleaved::new(chunk, 2).unwrap(), &mut a);
@@ -443,10 +470,34 @@ mod tests {
             for (a, b) in a.iter().zip(&b) {
                 assert!(
                     (a - b).abs() <= 1e-5 * a.max(*b),
-                    "avx2 {} vs portable {}",
+                    "avx2 {} vs generic {}",
                     a,
                     b
                 );
+            }
+        }
+    }
+
+    /// The plain and fused filter loops compute the same outputs. Runs on every target: where FMA
+    /// isn't in hardware, `mul_add` is merely slow.
+    #[test]
+    fn plain_and_fused_filter_loops_agree() {
+        let coeffs = design::<8>();
+        let mut rng = 0x9e37_79b9u32;
+        for _ in 0..200 {
+            let mut recent = [0.0f32; TAPS];
+            for r in recent.iter_mut() {
+                rng ^= rng << 13;
+                rng ^= rng >> 17;
+                rng ^= rng << 5;
+                *r = (rng as f32 / u32::MAX as f32) * 2.0 - 1.0;
+            }
+            let (a, b) = (
+                filter_split(&coeffs, &recent),
+                filter_split_fma(&coeffs, &recent),
+            );
+            for (a, b) in a.iter().zip(&b) {
+                assert!((a - b).abs() <= 1e-5, "plain {} vs fused {}", a, b);
             }
         }
     }

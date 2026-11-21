@@ -92,7 +92,10 @@ enum mode {
   EBUR128_MODE_TRUE_PEAK   = (1 << 5) | EBUR128_MODE_M
                                       | EBUR128_MODE_SAMPLE_PEAK,
   /** uses histogram algorithm to calculate loudness */
-  EBUR128_MODE_HISTOGRAM   = (1 << 6)
+  EBUR128_MODE_HISTOGRAM   = (1 << 6),
+  /** like EBUR128_MODE_TRUE_PEAK, with an interpolation filter flat to 20 kHz
+   *  at 44.1 kHz (Rust implementation only) */
+  EBUR128_MODE_TRUE_PEAK_ACCURATE = (1 << 30) | EBUR128_MODE_TRUE_PEAK
 };
 
 /** forward declaration of ebur128_state_internal */

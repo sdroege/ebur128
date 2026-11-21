@@ -199,6 +199,8 @@ impl<'a, S: Sample> Samples<'a, S> for Planar<'a, S> {
     }
 
     #[inline]
+    // `f` indexes every channel's slice, which an iterator over one channel can't express.
+    #[allow(clippy::needless_range_loop)]
     fn foreach_frame<F: Frame<Sample = S>>(&self, mut func: impl FnMut(F)) {
         let channels = self.data.len();
         assert_eq!(F::CHANNELS, channels);

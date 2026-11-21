@@ -144,6 +144,12 @@ impl Filter {
         }
     }
 
+    /// Swap the true-peak scanner for the one behind
+    /// [`Mode::TRUE_PEAK_ACCURATE`](crate::Mode::TRUE_PEAK_ACCURATE).
+    pub fn use_accurate_true_peak(&mut self, rate: u32) {
+        self.tp = crate::true_peak::TruePeak::new_accurate(rate, self.channels);
+    }
+
     pub fn reset_peaks(&mut self) {
         self.sample_peak.fill(0.0);
         self.true_peak.fill(0.0);

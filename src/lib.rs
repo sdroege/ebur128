@@ -48,6 +48,8 @@ pub mod true_peak;
 #[cfg(not(feature = "internal-tests"))]
 pub(crate) mod true_peak;
 
+pub(crate) mod true_peak_accurate;
+
 #[cfg(feature = "internal-tests")]
 pub mod history;
 #[cfg(not(feature = "internal-tests"))]

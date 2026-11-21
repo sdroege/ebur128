@@ -77,25 +77,29 @@ macro_rules! test_global_loudness(
 
 macro_rules! test_true_peak(
     ($file_name:expr, $rate:expr, $bpp:tt, $channel_map:expr, $expected_true_peak:expr) => {
-        let (mut e, samples) = prepare_file!($file_name, $rate, $bpp, ebur128::Mode::TRUE_PEAK, $channel_map);
+        // Both detectors must meet the Tech 3341 tolerance on the reference files.
+        for &mode in &[ebur128::Mode::TRUE_PEAK, ebur128::Mode::TRUE_PEAK_ACCURATE] {
+            let (mut e, samples) = prepare_file!($file_name, $rate, $bpp, mode, $channel_map);
 
-        add_samples!(e, samples, $bpp);
+            add_samples!(e, samples, $bpp);
 
-        let mut max_true_peak = f64::MIN;
-        for peak in (0..$channel_map.len())
-            .map(|c| e.true_peak(c as u32).expect("Failed to get true peak")) {
-            if peak > max_true_peak {
-                max_true_peak = peak;
+            let mut max_true_peak = f64::MIN;
+            for peak in (0..$channel_map.len())
+                .map(|c| e.true_peak(c as u32).expect("Failed to get true peak")) {
+                if peak > max_true_peak {
+                    max_true_peak = peak;
+                }
             }
-        }
-        let max_true_peak = 20.0 * f64::log10(max_true_peak);
+            let max_true_peak = 20.0 * f64::log10(max_true_peak);
 
-        assert!(
-            ($expected_true_peak - 0.4..=$expected_true_peak + 0.2).contains(&max_true_peak),
-            "{} != {}",
-            max_true_peak,
-            $expected_true_peak,
-        );
+            assert!(
+                ($expected_true_peak - 0.4..=$expected_true_peak + 0.2).contains(&max_true_peak),
+                "{:?}: {} != {}",
+                mode,
+                max_true_peak,
+                $expected_true_peak,
+            );
+        }
     };
 );
 
